@@ -1,0 +1,36 @@
+.banner {
+    display: flex;
+    justify-content: center; /* Centers content horizontally */
+    align-items: center;     /* Centers content vertically */
+    padding: 5px;
+    margin: 0;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    background-image: url('/img/background.jpg'); /* Your background image */
+    background-size: cover; /* Ensure the background image covers the full area */
+    background-position: center; /* Center the background image */
+}
+
+.banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: inherit;
+    background-size: inherit;
+    background-position: inherit;
+    filter: blur(4px); /* Apply blur effect only to the background */
+    z-index: 1; /* Place the blurred background behind the text */
+}
+
+.bannerText {
+    color: white;
+    text-align: center;
+    z-index: 20;
+    font-size: 2rem; /* Adjust size as needed */
+    font-weight: bold; /* Optional for emphasis */
+}
+
