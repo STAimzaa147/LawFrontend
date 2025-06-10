@@ -70,13 +70,13 @@ export default function LoginPage() {
           <span>Sign in with Google</span>
         </button>
 
-        <button
+        {/*<button
           type="button"
           onClick={() => signIn('facebook', { callbackUrl: '/' })}
           className="w-full bg-blue-600 text-white py-2 rounded-full hover:bg-blue-700"
         >
           Sign in with Facebook
-        </button>
+        </button>*/}
       </form>
     </div>
   )
