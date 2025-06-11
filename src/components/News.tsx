@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 type NewsItem = {
   _id: string;
@@ -57,7 +58,7 @@ export default function News() {
             <h3 className="text-xl font-semibold text-[#353C63] mb-2">{item.title}</h3>
             <p className="text-gray-600 line-clamp-3 flex-grow">{item.summary}</p>
             <button className="mt-4 text-sm text-[#353C63] hover:underline self-start">
-              อ่านเพิ่มเติม
+              <Link href={`/news/${item._id}`}>อ่านเพิ่มเติม</Link>
             </button>
           </div>
         </div>
