@@ -9,7 +9,7 @@ import { useSession } from "next-auth/react";
 export default function TopMenu(){
 
     const { data: session } = useSession();
-    console.log(session?.user);
+    console.log("User Data : ",session?.user);
     return(
         <div className="bg-white h-[70px] top-0 left-0 right-0 z-30 fixed border-y border-solid border-gray-100 items-center flex flex-row justify-between">
             {/* Left Section */}
@@ -37,13 +37,14 @@ export default function TopMenu(){
                 session ? (
                     <Menu as="div" className="relative inline-block text-left">
                         <MenuButton className="flex items-center gap-2 focus:outline-none">
+                        <div className="relative w-10 h-10 rounded-full overflow-hidden">
                         <Image
                             src={session.user?.image || "/img/default-avatar.jpg"}
                             alt="avatar"
-                            width={32}
-                            height={32}
-                            className="rounded-full object-cover"
+                            fill
+                            className="object-cover"
                         />
+                        </div>
                         <span className="text-gray-700 font-medium">
                             สวัสดี, {session.user?.name?.split(" ")[0] || "ผู้ใช้"}
                         </span>

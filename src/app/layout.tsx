@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Kanit } from "next/font/google";
 import "./globals.css";
 import TopMenu from "@/components/TopMenu";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./api/auth/[...nextauth]/authOptions";
 import NextAuthProvider from "@/provider/NextAuthProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const kanit = Kanit({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-kanit",
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -32,7 +28,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${kanit.variable} antialiased`}
       >
         <NextAuthProvider session={ nextAuthSession}>
         <TopMenu/>

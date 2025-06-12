@@ -15,6 +15,7 @@ export default function UserProfile() {
     lineId: '',
     district: '',
     province: '',
+    image: '',
   });
 
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,7 @@ export default function UserProfile() {
           lineId: data.data.line_id || '',
           district: data.data.location?.district || '',
           province: data.data.location?.province || '',
+          image: data.data.photo || ''
         });
       }
     } catch (error) {
@@ -116,11 +118,32 @@ export default function UserProfile() {
 
 
   if (loading) return <div className="text-white p-8">Loading...</div>;
-  const maskValue = (value: string): string => {
-  if (!value) return '';
-  const maskedLength = Math.max(value.length);
-  return '*'.repeat(maskedLength);
-};
+  // Mask all but last 4 digits of a phone number
+  const maskPhone = (phone: string): string => {
+    if (!phone) return '';
+    const visible = 4;
+    const masked = '*'.repeat(Math.max(0, phone.length - visible));
+    return masked + phone.slice(-visible);
+  };
+
+  // Mask email: show first 2 letters of local part, mask rest before @
+  const maskEmail = (email: string): string => {
+    if (!email) return '';
+    const [local, domain] = email.split('@');
+    if (!domain) return '*'.repeat(email.length); // fallback if not a valid email
+    const visible = local.slice(0, 2);
+    const masked = '*'.repeat(Math.max(0, local.length - 2));
+    return `${visible}${masked}@${domain}`;
+  };
+
+  // Mask all but last 6 digits of Thai ID
+  const maskThaiId = (id: string): string => {
+    if (!id) return '';
+    const visible = 6;
+    const masked = '*'.repeat(Math.max(0, id.length - visible));
+    return masked + id.slice(-visible);
+  };
+
 
   return (
     <div className="flex min-h-screen bg-[#3D4063]">
@@ -130,7 +153,7 @@ export default function UserProfile() {
             <div className="w-20 h-20 rounded-full bg-red-300 overflow-hidden">
               <div className="w-20 h-20 rounded-full bg-red-300 overflow-hidden relative">
                 <Image
-                  src={'/img/default-avatar.jpg'}
+                  src={user.image || '/img/default-avatar.jpg'}
                   alt="User avatar"
                   fill
                   style={{ objectFit: 'cover', borderRadius: '9999px' }} // rounded-full
@@ -153,9 +176,9 @@ export default function UserProfile() {
             {[
               { label: 'Name', key: 'firstName', value: user.firstName },
               { label: 'Last Name', key: 'lastName', value: user.lastName },
-              { label: 'Email Address', key: 'email', value: user.email },
-              { label: 'Phone Number', key: 'phone', value: isEditing ? user.phone : maskValue(user.phone) },
-              { label: 'Thai ID', key: 'thaiId', value: isEditing ? user.thaiId : maskValue(user.thaiId) },
+              { label: 'Email Address', key: 'email', value: isEditing ? user.email : maskEmail(user.email) },
+              { label: 'Phone Number', key: 'phone', value: isEditing ? user.phone : maskPhone(user.phone) },
+              { label: 'Thai ID', key: 'thaiId', value: isEditing ? user.thaiId : maskThaiId(user.thaiId) },
               { label: 'Line ID', key: 'lineId', value: user.lineId },
               { label: 'District', key: 'district', value: user.district },
               { label: 'Province', key: 'province', value: user.province },

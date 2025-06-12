@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { jwtDecode } from "jwt-decode"
 
+interface DecodedToken {
+  id: string;
+  name: string;
+  email: string;
+  // Add more fields as needed
+}
 
 export default function RegisterDetails() {
   const searchParams = useSearchParams()
@@ -106,7 +112,7 @@ export default function RegisterDetails() {
         name: payload.name,
       }))
 
-      const decoded: any = jwtDecode(data.token)
+      const decoded: DecodedToken = jwtDecode<DecodedToken>(data.token);
       const userId = decoded.id
 
       if (form.role === 'lawyer') {

@@ -1,16 +1,49 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 
 export default function CreateForum() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("คำถามกฎหมาย");
+  const [image, setImage] = useState<File | null>(null);
+  const { data: session } = useSession();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // You would send a POST request to your backend here
-    console.log({ title, content, category });
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("content", content);
+    formData.append("category", category);
+    if (image) formData.append("image", image);
+
+    try {
+    const response = await fetch('http://localhost:5050/api/v1/forum', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`, // 👈 Include token here
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    console.log("Forum data : ",data);
+
+    if (response.ok) {
+      alert('สร้างกระทู้สำเร็จ!'); // Created successfully!
+      setTitle('');
+      setContent('');
+      setCategory('คำถามกฎหมาย');
+      setImage(null);
+    } else {
+      alert(`เกิดข้อผิดพลาด: ${data.message || 'Unknown error'}`);
+    }
+  } catch (err) {
+    alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+    console.log(err);
+  }
   };
 
   return (
@@ -27,11 +60,24 @@ export default function CreateForum() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-black"
               required
             />
           </div>
-
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              รูปภาพ (ถ้ามี)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files?.[0]) setImage(e.target.files[0]);
+                else setImage(null);
+              }}
+              className="w-full text-black"
+            />
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               เนื้อหา
@@ -40,7 +86,7 @@ export default function CreateForum() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-black"
               required
             />
           </div>

@@ -37,7 +37,7 @@ export const authOptions: AuthOptions = {
           if (!res.ok || !response.success) {
             throw new Error(response.message || "Login failed");
           }
-
+          console.log("User Login Data",response);
           // Now return user with token from your backend
           return {
             id: response._id,
@@ -45,6 +45,7 @@ export const authOptions: AuthOptions = {
             email: response.email,
             role: response.role,
             token: response.token,
+            image: response.photo || "/img/default-avatar.jpg"
           };
         } catch (err) {
           console.error("Login error:", err);
@@ -77,6 +78,7 @@ export const authOptions: AuthOptions = {
       token.name = user.name;
       token.email = user.email;
       token.role = user.role;
+      token.picture = user.image;
     }
     return token;
   },
@@ -86,6 +88,7 @@ export const authOptions: AuthOptions = {
     session.user.name = token.name;
     session.user.email = token.email;
     session.user.role = token.role;
+    session.user.image = token.picture;
     session.accessToken = token.accessToken; // make token available on client session
     return session;
   },

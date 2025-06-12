@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 export default function SearchBar() {
   const [search, setSearch] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const wrapperRef = useRef(null);
+  const wrapperRef = useRef<HTMLFormElement>(null);
 
   const router = useRouter();
 
@@ -29,7 +29,7 @@ export default function SearchBar() {
   // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !(wrapperRef.current as any).contains(event.target)) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsFocused(false);
       }
     };

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-//import Image from "next/image";
+import Image from "next/image";
 
 type ForumPost = {
   _id: string;
@@ -21,7 +21,7 @@ async function getForums(): Promise<ForumPost[]> {
       cache: "no-store",
     });
     const data = await res.json();
-    console.log(data);
+    console.log("Forum Data : ",data);
     if (data.success) {
       return data.data;
     }
@@ -62,41 +62,39 @@ export default async function ForumPage() {
       </div>
       <div className="space-y-10 my-10 bg-white rounded-md">
         {forums.map((forum) => (
-          <article
-            key={forum._id}
-            className="border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition"
-          >
-           {/* {forum.image ? (
-            <div className="relative w-full md:w-64 h-40 rounded-md overflow-hidden flex-shrink-0">
-                <Image
-                src={forum.image}
-                alt={forum.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 256px"
-                />
-            </div>
-            ) : null} */}
-
-
-            <div className="flex flex-col justify-between flex-grow">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900 mb-2">{forum.title}</h2>
-                <p className="text-gray-700 line-clamp-3 mb-4">{forum.content}</p>
+          <Link href={`/forum/${forum._id}`} key={forum._id} className="block">
+            <article className="border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition cursor-pointer">
+              {forum.image && (
+                <div className="relative w-full md:w-64 h-40 rounded-md overflow-hidden flex-shrink-0">
+                  <Image
+                    src={forum.image}
+                    alt={forum.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 256px"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col justify-between flex-grow">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">{forum.title}</h2>
+                  <p className="text-gray-700 line-clamp-3 mb-4">{forum.content}</p>
+                </div>
+                <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
+                  <span className="capitalize bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    {forum.category}
+                  </span>
+                  <span>
+                    Posted by {forum.poster_id?.name || "Unknown"} on{" "}
+                    {new Date(forum.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
-                <span className="capitalize bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {forum.category}
-                </span>
-                <span>
-                  Posted by {forum.poster_id?.name || "Unknown"} on{" "}
-                  {new Date(forum.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          </article>
+            </article>
+          </Link>
         ))}
       </div>
     </main>
   );
 }
+          

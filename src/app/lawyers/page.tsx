@@ -1,6 +1,7 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 
 interface Lawyer {
   _id: string;
@@ -67,11 +68,7 @@ export default function LawyersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {lawyers.map((lawyer) => (
           <div key={lawyer._id} className="bg-white rounded-xl shadow p-4">
-            <img
-              src={lawyer.imageUrl || '/default-lawyer.jpg'}
-              alt={lawyer.name}
-              className="w-full h-40 object-cover rounded-lg mb-3"
-            />
+            <Image src="/images/lawyer.jpg" alt="Lawyer" width={500} height={300} />
             <h2 className="text-xl font-semibold">{lawyer.name}</h2>
             <p className="text-gray-600 text-sm">{lawyer.bio}</p>
             <p className="text-sm text-blue-600 mt-2">
