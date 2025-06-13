@@ -39,7 +39,7 @@ export default function UserProfile() {
       }
 
 
-      const res = await fetch(`${backendUrl}/api/v1/auth/me`, {
+      const res = await fetch(`${backendUrl}/api/v1/auth/getMe`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,

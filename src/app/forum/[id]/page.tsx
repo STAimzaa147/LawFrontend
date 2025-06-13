@@ -50,14 +50,7 @@ async function getComments(forumId: string): Promise<Comment[]> {
     return [];
   }
 }
-export async function generateStaticParams() {
-  return [];
-}
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  return {
-    title: `Forum Post ${params.id}`,
-  };
-}
+
 const ForumPage = async ({ params }:  { params: { id: string } }) => {
   const forum = await getForumById(params.id);
   if (!forum) return notFound();
