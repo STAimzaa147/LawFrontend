@@ -13,41 +13,51 @@ export default function CreateForum() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("content", content);
-    formData.append("category", category);
-    if (image) {
-      formData.append("image", image);
+    const hasImage = !!image;
+    let response;
+
+    if (hasImage) {
+      // Use FormData when image is included
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("content", content);
+      formData.append("category", category);
+      formData.append("image", image); // only if image exists
+
+      response = await fetch(`${backendUrl}/api/v1/forum`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: formData,
+      });
     } else {
-      formData.append("image", "");  // Append empty string when no image
+      // Use JSON when no image is uploaded
+      response = await fetch(`${backendUrl}/api/v1/forum`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          category,
+        }),
+      });
     }
 
-    try {
-    const response = await fetch(`${backendUrl}/api/v1/forum`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`, // 👈 Include token here
-      },
-      body: formData,
-    });
-
     const data = await response.json();
-    console.log("Forum data : ",data);
 
     if (response.ok) {
-      alert('สร้างกระทู้สำเร็จ!'); // Created successfully!
-      setTitle('');
-      setContent('');
-      setCategory('คำถามกฎหมาย');
+      alert("สร้างกระทู้สำเร็จ!");
+      setTitle("");
+      setContent("");
+      setCategory("คำถามกฎหมาย");
       setImage(null);
     } else {
       alert(`เกิดข้อผิดพลาด: ${data.message || 'Unknown error'}`);
     }
-  } catch (err) {
-    alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
-    console.log(err);
-  }
   };
 
   return (
