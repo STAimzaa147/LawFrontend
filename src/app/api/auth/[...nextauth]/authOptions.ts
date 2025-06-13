@@ -1,9 +1,11 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
-import { AuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 
-export const authOptions: AuthOptions = {
+export const authOptions : NextAuthOptions = {
   providers: [
     //Authentication Provider, use Credentials Provider
     CredentialsProvider({
@@ -70,7 +72,7 @@ export const authOptions: AuthOptions = {
   },
   session: { strategy: "jwt" },
   callbacks: {
-  async jwt({ token, user }) {
+  async jwt({ token, user }: { token: JWT; user?: User }) {
     if (user) {
       // On initial sign in, copy user info and token into JWT
       token.accessToken = user.token; // your backend token
@@ -82,11 +84,11 @@ export const authOptions: AuthOptions = {
     }
     return token;
   },
-  async session({ session, token }) {
+  async session({ session, token }: { session: Session; token: JWT }) {
     // Expose token fields in session.user
-    session.user.id = token.id;
-    session.user.name = token.name;
-    session.user.email = token.email;
+    session.user.id = token.id?? "";
+    session.user.name = token.name?? "";
+    session.user.email = token.email?? "";
     session.user.role = token.role;
     session.user.image = token.picture;
     session.accessToken = token.accessToken; // make token available on client session

@@ -34,9 +34,13 @@ export default function ForgotPasswordWithOtp() {
 
       setStep(2)
       setMessage('ส่ง OTP สำเร็จ กรุณาตรวจสอบโทรศัพท์ของคุณ')
-    } catch (e) {
-      setError(e.message)
-    }
+    } catch (e: unknown) {
+  if (e instanceof Error) {
+    setError(e.message);
+  } else {
+    setError(String(e)); // fallback for non-Error values
+  }
+}
   }
 
   const verifyOtp = async () => {
@@ -64,9 +68,13 @@ export default function ForgotPasswordWithOtp() {
 
       setStep(3)
       setMessage('ยืนยัน OTP สำเร็จ กรุณากรอกอีเมลและรหัสผ่านใหม่')
-    } catch (e) {
-      setError(e.message)
-    }
+    } catch (e: unknown) {
+  if (e instanceof Error) {
+    setError(e.message);
+  } else {
+    setError(String(e)); // fallback for non-Error values
+  }
+}
   }
 
   const resetPassword = async () => {
@@ -96,9 +104,13 @@ export default function ForgotPasswordWithOtp() {
       setEmail('')
       setPassword('')
       router.push('/api/auth/signin')
-    } catch (e) {
-      setError(e.message)
-    }
+    } catch (e: unknown) {
+  if (e instanceof Error) {
+    setError(e.message);
+  } else {
+    setError(String(e)); // fallback for non-Error values
+  }
+}
   }
 
   return (

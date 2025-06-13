@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 
+// interface PageProps {
+//   params: { id: string };
+// }
+
 type ForumPost = {
   _id: string;
   poster_id: { _id: string; name: string };
@@ -44,8 +48,15 @@ async function getComments(forumId: string): Promise<Comment[]> {
     return [];
   }
 }
-
-export default async function ForumDetailPage({ params }: { params: { id: string } }) {
+export async function generateStaticParams() {
+  return [];
+}
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  return {
+    title: `Forum Post ${params.id}`,
+  };
+}
+const ForumPage = async ({ params }:  { params: { id: string } }) => {
   const forum = await getForumById(params.id);
   if (!forum) return notFound();
 
@@ -91,3 +102,5 @@ export default async function ForumDetailPage({ params }: { params: { id: string
     </main>
   );
 }
+
+export default ForumPage;

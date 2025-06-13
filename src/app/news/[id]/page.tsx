@@ -89,3 +89,10 @@ async function OtherNews({ currentId }: { currentId: string }) {
     </aside>
   );
 }
+// export default function NewsDetailPage(){
+//   return(
+//     <div>
+
+//     </div>
+//   );
+// };
