@@ -14,11 +14,12 @@ export default function News() {
   // Temporary mock data – replace this with props or API data later
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const res = await fetch("http://localhost:5050/api/v1/news");
+        const res = await fetch(`${backendUrl}/api/v1/news`);
         const data = await res.json();
         if (data.success) {
           setNewsItems(data.data);
@@ -33,7 +34,7 @@ export default function News() {
     };
 
     fetchNews();
-  }, []);
+  }, [backendUrl]);
 
   if (loading) {
     return <p className="text-center py-10">Loading news...</p>;

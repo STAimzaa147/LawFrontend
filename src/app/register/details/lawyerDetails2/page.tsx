@@ -9,6 +9,7 @@ export default function LawyerDetailsStep2() {
 
   const searchParams = useSearchParams()
   const userId = searchParams.get('user_id')
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   console.log("Lawyer ID:", userId)
 
@@ -66,7 +67,7 @@ export default function LawyerDetailsStep2() {
       verificationDocs: licenseBase64 || "",
     }
 
-    const response = await fetch('http://localhost:5050/api/v1/lawyer', {
+    const response = await fetch(`${backendUrl}/api/v1/lawyer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

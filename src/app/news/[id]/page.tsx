@@ -9,9 +9,11 @@ type NewsItem = {
   image: string;
 };
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 async function getNewsById(id: string): Promise<NewsItem | null> {
   try {
-    const res = await fetch(`http://localhost:5050/api/v1/news/${id}`, {
+    const res = await fetch(`${backendUrl}/api/v1/news/${id}`, {
       cache: "no-store",
     });
     const data = await res.json();
@@ -59,7 +61,7 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
 
 // Sidebar component with images
 async function OtherNews({ currentId }: { currentId: string }) {
-  const res = await fetch(`http://localhost:5050/api/v1/news`, {
+  const res = await fetch(`${backendUrl}/api/v1/news`, {
     cache: "no-store",
   });
   const data = await res.json();

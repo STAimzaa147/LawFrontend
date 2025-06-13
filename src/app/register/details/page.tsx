@@ -16,6 +16,7 @@ export default function RegisterDetails() {
   const router = useRouter()
   const rawPhone = searchParams.get('phone') || ''
   const phone = rawPhone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') // formatted like OTP
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   console.log("Phone ",phone);
 
@@ -95,7 +96,7 @@ export default function RegisterDetails() {
 
       //register
       console.log(payload)
-      const res = await fetch('http://localhost:5050/api/v1/auth/register', {
+      const res = await fetch(`${backendUrl}/api/v1/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

@@ -11,7 +11,7 @@ export default function ForgotPasswordWithOtp() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
-
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const sendOtp = async () => {
     setError('')
     const digitsOnly = phone.replace(/\D/g, '')
@@ -24,7 +24,7 @@ export default function ForgotPasswordWithOtp() {
     const formattedPhone = digitsOnly.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
 
     try {
-      const res = await fetch('http://localhost:5050/api/v1/otpService/send', {
+      const res = await fetch(`${backendUrl}/api/v1/otpService/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tel: formattedPhone }),
@@ -55,7 +55,7 @@ export default function ForgotPasswordWithOtp() {
     const formattedPhone = digitsOnly.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
 
     try {
-      const res = await fetch('http://localhost:5050/api/v1/otpService/verify', {
+      const res = await fetch(`${backendUrl}/api/v1/otpService/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tel: formattedPhone, otp }),
@@ -86,7 +86,7 @@ export default function ForgotPasswordWithOtp() {
     }
 
     try {
-      const res = await fetch('http://localhost:5050/api/v1/auth/resetPassword', {
+      const res = await fetch(`${backendUrl}/api/v1/auth/resetPassword`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

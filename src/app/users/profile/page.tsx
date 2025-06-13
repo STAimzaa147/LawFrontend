@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { getSession } from 'next-auth/react';
 
 export default function UserProfile() {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
   const [user, setUser] = useState({
     name: '',
     firstName: '',
@@ -37,7 +39,7 @@ export default function UserProfile() {
       }
 
 
-      const res = await fetch('http://localhost:5050/api/v1/auth/me', {
+      const res = await fetch(`${backendUrl}/api/v1/auth/me`, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -77,7 +79,7 @@ export default function UserProfile() {
   };
 
   fetchUser();
-}, []);
+}, [backendUrl]);
 
   const handleSave = async () => {
   try {
@@ -93,7 +95,7 @@ export default function UserProfile() {
       name: `${user.firstName} ${user.lastName}`.trim(), // merge into 'name'
     };
 
-    const res = await fetch('http://localhost:5050/api/v1/auth/updateprofile', {
+    const res = await fetch(`${backendUrl}/api/v1/auth/updateprofile`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

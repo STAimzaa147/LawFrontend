@@ -15,9 +15,11 @@ type ForumPost = {
   createdAt: string;
 };
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 async function getForums(): Promise<ForumPost[]> {
   try {
-    const res = await fetch("http://localhost:5050/api/v1/forum", {
+    const res = await fetch(`${backendUrl}/api/v1/forum`, {
       cache: "no-store",
     });
     const data = await res.json();

@@ -5,6 +5,8 @@ import type { JWT } from "next-auth/jwt";
 import type { Session, User } from "next-auth";
 import type { NextAuthOptions } from "next-auth";
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export const authOptions : NextAuthOptions = {
   providers: [
     //Authentication Provider, use Credentials Provider
@@ -23,7 +25,7 @@ export const authOptions : NextAuthOptions = {
         if (!credentials) return null;
 
         try {
-          const res = await fetch("http://localhost:5050/api/v1/auth/login", {
+          const res = await fetch(`${backendUrl}/api/v1/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

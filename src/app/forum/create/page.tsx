@@ -9,7 +9,7 @@ export default function CreateForum() {
   const [category, setCategory] = useState("คำถามกฎหมาย");
   const [image, setImage] = useState<File | null>(null);
   const { data: session } = useSession();
-
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -20,7 +20,7 @@ export default function CreateForum() {
     if (image) formData.append("image", image);
 
     try {
-    const response = await fetch('http://localhost:5050/api/v1/forum', {
+    const response = await fetch(`${backendUrl}/api/v1/forum`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${session?.accessToken}`, // 👈 Include token here

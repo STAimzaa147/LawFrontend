@@ -9,6 +9,7 @@ export default function RegisterStep1() {
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const router = useRouter()
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,7 +27,7 @@ export default function RegisterStep1() {
     try {
       console.log('Sending OTP to:', formattedPhone);
 
-      const res = await fetch('http://localhost:5050/api/v1/otpService/send', {
+      const res = await fetch(`${backendUrl}/api/v1/otpService/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tel: formattedPhone }), // send formatted phone as "tel"
@@ -57,7 +58,7 @@ export default function RegisterStep1() {
     try {
       console.log('Verifying OTP:', otp);
 
-      const res = await fetch('http://localhost:5050/api/v1/otpService/verify', {
+      const res = await fetch(`${backendUrl}/api/v1/otpService/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp, tel : formattedPhone }), // sending phone and otp

@@ -22,8 +22,10 @@ type Comment = {
   createdAt: string;
 };
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 async function getForumById(id: string): Promise<ForumPost | null> {
-  const res = await fetch(`http://localhost:5050/api/v1/forum/${id}`, { cache: "no-store" });
+  const res = await fetch(`${backendUrl}/api/v1/forum/${id}`, { cache: "no-store" });
   const data = await res.json();
   console.log("Forum data: ", data);
   return data.success ? data.data : null;
@@ -31,7 +33,7 @@ async function getForumById(id: string): Promise<ForumPost | null> {
 
 async function getComments(forumId: string): Promise<Comment[]> {
   try {
-    const res = await fetch(`http://localhost:5050/api/v1/forum/${forumId}/comment`, {
+    const res = await fetch(`${backendUrl}/api/v1/forum/${forumId}/comment`, {
       cache: "no-store",
     });
 
