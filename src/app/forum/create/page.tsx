@@ -2,8 +2,11 @@
 
 import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 export default function CreateForum() {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("คำถามกฎหมาย");
@@ -55,6 +58,8 @@ export default function CreateForum() {
       setContent("");
       setCategory("คำถามกฎหมาย");
       setImage(null);
+
+      router.push('/forum');
     } else {
       alert(`เกิดข้อผิดพลาด: ${data.message || 'Unknown error'}`);
     }
