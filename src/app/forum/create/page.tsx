@@ -17,7 +17,11 @@ export default function CreateForum() {
     formData.append("title", title);
     formData.append("content", content);
     formData.append("category", category);
-    if (image) formData.append("image", image);
+    if (image) {
+      formData.append("image", image);
+    } else {
+      formData.append("image", "");  // Append empty string when no image
+    }
 
     try {
     const response = await fetch(`${backendUrl}/api/v1/forum`, {
