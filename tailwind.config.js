@@ -6,7 +6,11 @@ module.exports = {
     './src/provider/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Kanit', 'sans-serif'], // Replace default sans
+      },
+    },
   },
   plugins: [],
 };

@@ -62,10 +62,10 @@ export default async function ForumPage() {
           + Add Forum
         </Link>
       </div>
-      <div className="space-y-10 my-10 bg-white rounded-md">
+      <div className="space-y-5 my-10 rounded-md">
         {forums.map((forum) => (
           <Link href={`/forum/${forum._id}`} key={forum._id} className="block">
-            <article className="border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition cursor-pointer">
+            <article className="bg-white border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition cursor-pointer">
               {forum.image && (
                 <div className="relative w-full md:w-64 h-40 rounded-md overflow-hidden flex-shrink-0">
                   <Image

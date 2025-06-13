@@ -22,7 +22,7 @@ export default function TopMenu(){
                     session ? (
                         <>
                             <TopMenuItem title="ปฏิทิน" pageRef="/schedule" />
-                            <TopMenuItem title="แชท" pageRef="/chat" />
+                            <TopMenuItem title="แชท" pageRef="/chatai" />
                             <TopMenuItem title="คดี" pageRef="/case" />
                         </>
                     ):(

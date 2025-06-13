@@ -66,7 +66,7 @@ export default function CreateForum() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              รูปภาพ (ถ้ามี)
+              รูปภาพ
             </label>
             <input
               type="file"

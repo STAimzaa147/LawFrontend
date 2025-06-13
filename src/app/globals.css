@@ -1,11 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=Kanit&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #353C63;
+  --foreground: #ededed;
 }
 
 /* @theme inline {
@@ -25,6 +24,6 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Kanit', sans-serif;
+  font-family: var(--font-kanit), sans-serif;
   margin-top: 70px;
 }
