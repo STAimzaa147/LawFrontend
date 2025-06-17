@@ -1,12 +1,53 @@
 'use client'
 import { useState, useRef, useEffect } from 'react';
+import { useSession } from "next-auth/react";
 import Image from 'next/image';
 
 export default function Home() {
   const [messages, setMessages] = useState<{ sender: 'user' | 'bot', text: string }[]>([]);
   const [input, setInput] = useState('');
+  const { data: session } = useSession();
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
+  //Load message history
+  const aiId = '6828a931e92578c60ee00ebd'; // your AI bot id here
+  useEffect(() => {
+    if (!session) return;
+
+    async function loadPreviousChats() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/chat/${aiId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session?.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!res.ok) throw new Error(res.statusText);
+
+        const chats = await res.json();
+
+        type Chat = {
+          sender_id: { toString: () => string };
+          text: string;
+        };
+
+        const formattedMessages = chats.map((chat: Chat) => ({
+          sender: chat.sender_id.toString() === session?.user.id ? 'user' : 'bot',
+          text: chat.text,
+        }));
+
+
+
+        setMessages(formattedMessages);
+      } catch (err) {
+        console.error('Failed to load chats', err);
+      }
+    }
+
+    loadPreviousChats();
+  }, [session]);
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
@@ -16,6 +57,19 @@ export default function Home() {
   async function sendMessage() {
     const text = input.trim();
     if (!text) return;
+
+    //Save user message
+    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/chat`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session?.accessToken} `,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        receiver_id: '6828a931e92578c60ee00ebd',
+        text:text
+      })
+    });
 
     setMessages(prev => [...prev, { sender: 'user', text }, { sender: 'bot', text: '...' }]);
     setInput('');
@@ -56,6 +110,16 @@ export default function Home() {
 - สามารถตอบเป็นภาษาอังกฤษได้ด้วย เมื่อคำถามเป็นภาษาอังกฤษ
     `;
     const api = process.env.NEXT_PUBLIC_CHATGPT_API;
+    const recentMessages = messages.slice(-6); 
+    const fullMessages = [
+      { role: 'system', content: systemPrompt },
+      ...recentMessages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      })),
+      { role: 'user', content: text }
+    ];
+
     try {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -65,15 +129,26 @@ export default function Home() {
         },
         body: JSON.stringify({
           model: 'gpt-4.1-nano',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text }
-          ]
+          messages: fullMessages
         })
       });
 
       const data = await res.json();
       const answer = data.choices?.[0]?.message?.content || 'ขออภัย เกิดข้อผิดพลาด';
+      //save Lawdee message
+
+        await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/chat/ai`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.accessToken} `,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            receiver_id: session?.user.id,
+            text:answer
+          })
+        });
+
 
       setMessages(prev => {
         const newMessages = [...prev];
@@ -89,27 +164,33 @@ export default function Home() {
       });
     }
   }
-
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const autoResize = () => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+    }
+  };
   return (
-    <div className="flex flex-col items-center justify-center h-screen ">
+    <div className="flex flex-col items-center justify-center h-[91.5dvh] ">
       <div className="w-full max-w-md h-full flex flex-col border bg-white">
-        <header className="flex items-center justify-between h-32 bg-gray-100 px-2 border-b">
-          <button className="text-xl">&larr;</button>
-
-          <div className="flex flex-col items-center mx-auto">
-
+        <header className="relative h-32 bg-gray-100 border-b flex items-center justify-center">
+          <button className="absolute left-4 text-blue-800 hover:bg-blue-100 p-2 rounded-full transition duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <div className="flex flex-col items-center">
             <Image
-            src="/img/lawd.png"
-            alt="AI Lawyer Avatar"
-            width={40}
-            height={40}
-            className="rounded-full"
+              src="/img/lawd.png"
+              alt="AI Lawyer Avatar"
+              width={50}
+              height={50}
+              className="rounded-full"
             />
             <span className="font-semibold text-lg text-gray-600">LAWDEE AI</span>
           </div>
         </header>
-
-
         <div ref={chatBoxRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.map((msg, idx) => (
             <div key={idx} className={`max-w-[80%] px-4 py-2 rounded-2xl text-black ${msg.sender === 'user' ? 'bg-blue-100 self-end ml-auto' : 'bg-gray-200 self-start mr-auto'}`}>
@@ -118,23 +199,35 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="flex items-center p-4 border-t bg-gray-50">
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-            placeholder="Aa"
-            rows={2}
-            className="flex-grow p-2 rounded-2xl border resize-none bg-gray-100 text-black"
-          />
-          <button onClick={sendMessage} className="text-2xl ml-2">⇧</button>
+        <div className="flex items-center px-4 py-4 border-t bg-white">
+          <div className="relative flex items-center w-full">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                autoResize();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Aa"
+              rows={1}
+              className="flex-grow bg-gray-100 rounded-3xl py-2 px-4 text-l text-black resize-none outline-none border border-transparent focus:border-gray-300 max-h-40 overflow-y-auto"
+            />
+            <button
+              onClick={sendMessage}
+              className="ml-2 w-9 h-9 rounded-full hover:bg-blue-100 border-2 border-blue-800 text-blue-800 flex items-center justify-center text-xl font-bold"
+            >
+              ↑
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

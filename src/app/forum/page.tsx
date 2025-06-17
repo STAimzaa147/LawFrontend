@@ -1,6 +1,10 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 type ForumPost = {
   _id: string;
@@ -17,86 +21,88 @@ type ForumPost = {
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-async function getForums(): Promise<ForumPost[]> {
-  try {
-    const res = await fetch(`${backendUrl}/api/v1/forum`, {
-      cache: "no-store",
-    });
-    const data = await res.json();
-    console.log("Forum Data : ",data);
-    if (data.success) {
-      return data.data;
+export default function ForumPage() {
+  const [forums, setForums] = useState<ForumPost[]>([]);
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchForums = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/v1/forum`, {
+          cache: "no-store",
+        });
+        const data = await res.json();
+        console.log("Forum Data : ", data);
+        if (data.success) {
+          setForums(data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching forums:", error);
+      }
+    };
+
+    fetchForums();
+  }, []);
+
+  const handleAddForumClick = () => {
+    if (session?.user) {
+      router.push("/forum/create");
+    } else {
+      alert("You must be logged in to add a forum.");
+      router.push("/api/auth/signin");
     }
-  } catch (error) {
-    console.error("Error fetching forums:", error);
-  }
-  return [];
-}
-
-export default async function ForumPage() {
-  const forums = await getForums();
-
-  if (forums.length === 0) {
-    return (
-      <main className="max-w-5xl mx-auto p-6">
-        <div className="flex justify-end mb-4">
-          <Link
-            href="/forum/create"
-            className="bg-white text-black px-4 py-2 rounded hover:bg-gray-300 transition"
-          >
-            + Add Forum
-          </Link>
-        </div>
-        <p className="text-center mt-10 text-gray-500">No forum posts available.</p>
-      </main>
-    );
-  }
+  };
 
   return (
     <main className="max-w-5xl mx-auto p-6">
       <div className="flex justify-end mb-4">
-        <Link
-          href="/forum/create"
+        <button
+          onClick={handleAddForumClick}
           className="bg-white text-black px-4 py-2 rounded hover:bg-gray-300 transition"
         >
-          + Add Forum
-        </Link>
+          + โพสต์กระทู้
+        </button>
       </div>
-      <div className="space-y-5 my-10 rounded-md">
-        {forums.map((forum) => (
-          <Link href={`/forum/${forum._id}`} key={forum._id} className="block">
-            <article className="bg-white border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition cursor-pointer">
-              {forum.image && (
-                <div className="relative w-full md:w-64 h-40 rounded-md overflow-hidden flex-shrink-0">
-                  <Image
-                    src={forum.image}
-                    alt={forum.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 256px"
-                  />
+
+      {forums.length === 0 ? (
+        <p className="text-center mt-10 text-gray-500">No forum posts available.</p>
+      ) : (
+        <div className="space-y-5 my-10 rounded-md">
+          {forums.map((forum) => (
+            <Link href={`/forum/${forum._id}`} key={forum._id} className="block">
+              <article className="bg-white border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition cursor-pointer">
+                {forum.image && (
+                  <div className="relative w-full md:w-64 h-40 rounded-md overflow-hidden flex-shrink-0">
+                    <Image
+                      src={forum.image}
+                      alt={forum.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 256px"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col justify-between flex-grow">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">{forum.title}</h2>
+                    <p className="text-gray-700 line-clamp-3 mb-4">{forum.content}</p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
+                    <span className="capitalize bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      {forum.category}
+                    </span>
+                    <span>
+                      Posted by {forum.poster_id?.name || "Unknown"} on{" "}
+                      {new Date(forum.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
-              )}
-              <div className="flex flex-col justify-between flex-grow">
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">{forum.title}</h2>
-                  <p className="text-gray-700 line-clamp-3 mb-4">{forum.content}</p>
-                </div>
-                <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
-                  <span className="capitalize bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {forum.category}
-                  </span>
-                  <span>
-                    Posted by {forum.poster_id?.name || "Unknown"} on{" "}
-                    {new Date(forum.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            </article>
-          </Link>
-        ))}
-      </div>
+              </article>
+            </Link>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
-          
