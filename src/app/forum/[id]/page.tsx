@@ -208,8 +208,8 @@ export default function ForumPage({ params }: { params: { id: string } }) {
           <ul className="space-y-6">
             {comments.map((comment) =>
               comment && comment.content ? (
-                <li key={comment._id} className="border-t pt-4 relative">
-                  <p className="text-gray-800">{comment.content}</p>
+                <li key={comment._id} className="border-t pt-4 relative p">
+                  <p className="text-gray-800 mt-3">{comment.content}</p>
                   <span className="text-xs text-gray-500 block mt-1">
                     By {comment.user_id?.name || "Unknown"} on{" "}
                     {new Date(comment.createdAt).toLocaleString()}
