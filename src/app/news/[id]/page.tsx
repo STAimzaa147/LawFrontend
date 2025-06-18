@@ -7,6 +7,7 @@ type NewsItem = {
   summary: string;
   content: string;
   image: string;
+  createdAt: string;
 };
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -38,7 +39,15 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
         {/* Main Article */}
         <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
         <h1 className="text-2xl md:text-3xl font-semibold mb-4">{newsItem.title}</h1>
-
+        <div className="text-xs text-gray-500 my-5">
+          Posted on{" "}
+          <time dateTime={newsItem.createdAt}>
+            {new Date(newsItem.createdAt).toLocaleString("th-TH", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </time>
+        </div>
         <div className="relative w-full my-5" style={{ paddingTop: '56.25%' /* 9/16 ratio */ }}>
         <Image
             src={newsItem.image}
@@ -49,6 +58,7 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
         </div>
 
         <p className="text-sm text-gray-700 whitespace-pre-line">{newsItem.content}</p>
+        
         </section>
 
 
@@ -68,7 +78,9 @@ async function OtherNews({ currentId }: { currentId: string }) {
 
   if (!data.success) return null;
   console.log("Get small news", data);
-  const otherNews: NewsItem[] = data.data.filter((item: NewsItem) => item._id !== currentId);
+  const otherNews: NewsItem[] = data.data
+  .filter((item: NewsItem) => item._id !== currentId)
+  .slice(0, 5);
 
   return (
     <aside className="space-y-4">

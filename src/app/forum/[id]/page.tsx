@@ -133,7 +133,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
     }
   };
 
-  if (!forum) return <p className="text-center p-6 my -10">Loading...</p>;
+  if (!forum) return <p className="text-center p-6 my-10">Loading...</p>;
 
   return (
     <>
@@ -173,7 +173,10 @@ export default function ForumPage({ params }: { params: { id: string } }) {
         <h1 className="text-3xl text-black font-bold mb-4">{forum.title}</h1>
       </div>
       <div className="text-gray-600 text-sm mb-2">
-        Posted by {forum.poster_id.name} on {new Date(forum.createdAt).toLocaleString()}
+        Posted by {forum.poster_id.name} on {new Date(forum.createdAt).toLocaleString("th-TH", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })}
       </div>
       <div className="text-blue-700 font-medium mb-6">{forum.category}</div>
 
@@ -212,7 +215,10 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                   <p className="text-gray-800 mt-3">{comment.content}</p>
                   <span className="text-xs text-gray-500 block mt-1">
                     By {comment.user_id?.name || "Unknown"} on{" "}
-                    {new Date(comment.createdAt).toLocaleString()}
+                    {new Date(comment.createdAt).toLocaleString("th-TH", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
                   </span>
 
                   {/* Menu trigger (show only for comment owner) */}

@@ -128,7 +128,10 @@ export default function ForumPage() {
                       </span>
                       <span>
                         Posted by {forum.poster_id?.name || "Unknown"} on{" "}
-                        {new Date(forum.createdAt).toLocaleDateString()}
+                        {new Date(forum.createdAt).toLocaleString("th-TH", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </span>
                     </div>
                   </div>

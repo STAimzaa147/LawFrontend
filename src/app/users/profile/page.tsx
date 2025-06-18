@@ -120,6 +120,13 @@ export default function UserProfile() {
 
 
   if (loading) return <div className="text-white p-8">Loading...</div>;
+  // Mask lineID
+  const maskLineID = (lineID: string): string => {
+    if (!lineID) return '';
+    const visible = 0;
+    const masked = '*'.repeat(Math.max(0, lineID.length - visible));
+    return masked ;
+  };
   // Mask all but last 4 digits of a phone number
   const maskPhone = (phone: string): string => {
     if (!phone) return '';
@@ -150,7 +157,7 @@ export default function UserProfile() {
   return (
     <div className="flex min-h-screen bg-[#3D4063]">
       <div className="flex-1 p-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-md p-1">
           <div className="bg-[#2E3154] rounded-t-xl px-6 py-8 flex items-center gap-4">
             <div className="w-20 h-20 rounded-full bg-red-300 overflow-hidden">
               <div className="w-20 h-20 rounded-full bg-red-300 overflow-hidden relative">
@@ -167,7 +174,7 @@ export default function UserProfile() {
             <div className="ml-auto">
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="bg-[#2E3154] text-white border border-white rounded-md px-4 py-2 hover:bg-white hover:text-[#2E3154]"
+                className="bg-[#2E3154] text-white border border-white rounded-3xl px-4 py-2 hover:bg-white hover:text-[#2E3154]"
               >
                 {isEditing ? 'Cancel' : 'Edit User Profile'}
               </button>
@@ -181,7 +188,7 @@ export default function UserProfile() {
               { label: 'Email Address', key: 'email', value: isEditing ? user.email : maskEmail(user.email) },
               { label: 'Phone Number', key: 'phone', value: isEditing ? user.phone : maskPhone(user.phone) },
               { label: 'Thai ID', key: 'thaiId', value: isEditing ? user.thaiId : maskThaiId(user.thaiId) },
-              { label: 'Line ID', key: 'lineId', value: user.lineId },
+              { label: 'Line ID', key: 'lineId', value: isEditing ? user.lineId : maskLineID(user.lineId) },
               { label: 'District', key: 'district', value: user.district },
               { label: 'Province', key: 'province', value: user.province },
             ].map(({ label, key, value }) => (
@@ -193,7 +200,7 @@ export default function UserProfile() {
                   onChange={(e) =>
                     setUser((prev) => ({ ...prev, [key]: e.target.value }))
                   }
-                  className="w-full p-2 rounded-md bg-gray-200"
+                  className="w-full p-2 rounded-3xl bg-gray-200"
                   readOnly={!isEditing}
                 />
               </div>
@@ -203,7 +210,7 @@ export default function UserProfile() {
             <div className="px-6">
               <button
                 onClick={handleSave}
-                className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                className="m-3 bg-[#3D4063] text-white px-4 py-2 rounded-3xl hover:bg-[#3D4063]/80"
               >
                 Save Changes
               </button>
