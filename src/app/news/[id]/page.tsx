@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from 'next/image';
+import ShareButton from "@/components/ShareButton";
 
 type NewsItem = {
   _id: string;
@@ -8,6 +9,7 @@ type NewsItem = {
   content: string;
   image: string;
   createdAt: string;
+  category?: string[];
 };
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -38,27 +40,41 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Main Article */}
         <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
-        <h1 className="text-2xl md:text-3xl font-semibold mb-4">{newsItem.title}</h1>
-        <div className="text-xs text-gray-500 my-5">
-          Posted on{" "}
-          <time dateTime={newsItem.createdAt}>
-            {new Date(newsItem.createdAt).toLocaleString("th-TH", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </time>
-        </div>
-        <div className="relative w-full my-5" style={{ paddingTop: '56.25%' /* 9/16 ratio */ }}>
-        <Image
-            src={newsItem.image}
-            alt={newsItem.title}
-            fill
-            className="object-cover rounded-md"
-        />
-        </div>
+          <h1 className="text-2xl md:text-3xl font-semibold mb-4 ml-14">{newsItem.title}</h1>
+          <div className="flex justify-between items-center text-xs text-gray-500 my-5 px-16">
+            <div>
+              Posted on{" "}
+              <time dateTime={newsItem.createdAt}>
+                {new Date(newsItem.createdAt).toLocaleString("th-TH", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </time>
+            </div>
 
-        <p className="text-sm text-gray-700 whitespace-pre-line">{newsItem.content}</p>
-        
+            <ShareButton/>
+          </div>
+          <div className="relative w-full max-w-2xl h-80 mx-auto rounded-2xl overflow-hidden mb-12" style={{ paddingTop: '56.25%' /* 9/16 ratio */ }}>
+          <Image
+              src={newsItem.image}
+              alt={newsItem.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 1024px"
+          />
+          </div>
+
+          <p className="text-sm text-gray-700 whitespace-pre-line px-16">{newsItem.content}</p>
+          
+          {/* Tags section */}
+          {newsItem.category && (
+            <div className="mt-14 px-16">
+              <span className="bg-gray-200 text-black px-3 py-1 rounded-3xl text-sm font-medium">
+                {newsItem.category}
+              </span>
+            </div>
+          )}
+
         </section>
 
 
@@ -79,34 +95,41 @@ async function OtherNews({ currentId }: { currentId: string }) {
   if (!data.success) return null;
   console.log("Get small news", data);
   const otherNews: NewsItem[] = data.data
-  .filter((item: NewsItem) => item._id !== currentId)
-  .slice(0, 5);
+    .filter((item: NewsItem) => item._id !== currentId)
+    .slice(0, 5);
 
   return (
     <aside className="space-y-4">
-    {otherNews.map((item: NewsItem) => (
+      {otherNews.map((item: NewsItem) => (
         <a
-        key={item._id}
-        href={`/news/${item._id}`}
-        className="flex items-center gap-4 bg-white text-black rounded-lg p-4 shadow-md hover:bg-gray-100 transition min-h-[100px]"
+          key={item._id}
+          href={`/news/${item._id}`}
+          className="flex flex-col bg-white/80 text-black rounded-lg shadow-md hover:bg-gray-100 transition min-h-[100px]"
         >
-        <Image
-        src={item.image}
-        alt={item.title}
-        width={120}
-        height={90}
-        className="object-cover rounded-md w-[120px] h-[90px]"
-        />
-        <span className="text-base font-medium">{item.title}</span>
+          <div className="flex items-center ">
+            <Image
+              src={item.image}
+              alt={item.title}
+              width={120}
+              height={90}
+              className="object-cover rounded-l-lg w-[180px] h-[120px]"
+            />
+            <div className="flex flex-col flex-grow px-4">
+              <span className="text-base font-medium">{item.title}</span>
+              <div className="border-t border-black mt-1" />
+              <time
+                dateTime={item.createdAt}
+                className="text-right text-xs text-gray-600 mt-2"
+              >
+                {new Date(item.createdAt).toLocaleString("th-TH", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </time>
+            </div>
+          </div>
         </a>
-    ))}
+      ))}
     </aside>
   );
 }
-// export default function NewsDetailPage(){
-//   return(
-//     <div>
-
-//     </div>
-//   );
-// };

@@ -2,17 +2,20 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { HiChevronLeft, HiChevronRight } from "react-icons/hi";
 
 type NewsItem = {
   _id: string;
   title: string;
-  summary: string;
+  summary?: string;
+  content: string;
   image: string;
+  createdAt: string;
 };
 
 export default function News() {
-  // Temporary mock data – replace this with props or API data later
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [startIndex, setStartIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -36,18 +39,44 @@ export default function News() {
     fetchNews();
   }, [backendUrl]);
 
+  const handlePrev = () => {
+    if (startIndex > 0) setStartIndex(startIndex - 1);
+  };
+
+  const handleNext = () => {
+    if (startIndex + 4 < newsItems.length) setStartIndex(startIndex + 1);
+  };
+
+  const visibleItems = newsItems.slice(startIndex, startIndex + 4);
+
   if (loading) {
     return <p className="text-center py-10">Loading news...</p>;
   }
-  console.log(newsItems);
+
   return (
-    <section className="mx-15 px-6 py-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-      {newsItems.map((item) => (
+    <section className="relative px-28 py-10 text-white">
+    {/* Left Button */}
+    <button
+      onClick={handlePrev}
+      disabled={startIndex === 0}
+      className="absolute left-10 top-1/2 transform -translate-y-1/2 z-10 bg-black text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 disabled:opacity-40"
+    >
+      <HiChevronLeft className="w-5 h-5 text-white" />
+    </button>
+
+    {/* Right Button */}
+    <button
+      onClick={handleNext}
+      disabled={startIndex + 4 >= newsItems.length}
+      className="absolute right-10 top-1/2 transform -translate-y-1/2 z-10 bg-black text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 disabled:opacity-40"
+    >
+      <HiChevronRight className="w-5 h-5 text-white" />
+    </button>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 items-center">
+      {visibleItems.map((item) => (
         <Link key={item._id} href={`/news/${item._id}`}>
-          <div 
-            className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col justify-between"
-            style={{ height: '100%' }}
-          >
+          <div>
             <Image
               src={item.image}
               alt={item.title}
@@ -56,15 +85,24 @@ export default function News() {
               className="object-cover w-full h-48"
             />
             <div className="p-4 flex flex-col flex-grow">
-              <h3 className="text-xl font-semibold text-[#353C63] mb-2">{item.title}</h3>
-              <p className="text-gray-600 line-clamp-3 flex-grow">{item.summary}</p>
-              <button className="mt-4 text-sm text-[#353C63] hover:underline self-start">
-                อ่านเพิ่มเติม
-              </button>
+              <h2 className="text-xl font-[700] text-white mb-3">{item.title}</h2>
+              <p className="text-white font-[100] line-clamp-3 flex-grow">
+                {item.summary || item.content.slice(0, 100) + "..."}
+              </p>
+              <div className="w-2/8 border-t border-white mt-4"></div>
+              <div className="text-right">
+                <span className="text-sm text-gray-300">
+                  {new Date(item.createdAt).toLocaleString("th-TH", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
+              </div>
             </div>
           </div>
         </Link>
       ))}
-    </section>
+    </div>
+  </section>
   );
 }

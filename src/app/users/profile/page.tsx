@@ -91,8 +91,14 @@ export default function UserProfile() {
     }
 
     const updatedUser = {
-      ...user,
-      name: `${user.firstName} ${user.lastName}`.trim(), // merge into 'name'
+      name: `${user.firstName} ${user.lastName}`.trim(),
+      tel: user.phone,
+      thai_id: user.thaiId,
+      line_id: user.lineId,
+      location: {
+        district: user.district,
+        province: user.province,
+      },
     };
 
     const res = await fetch(`${backendUrl}/api/v1/auth/updateprofile`, {

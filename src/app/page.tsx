@@ -23,8 +23,10 @@ export default function Home() {
           <SearchBar/>
         </div>
         <div className="relative z-10 flex flex-col items-center justify-start h-full px-4 text-white text-center">
-          <h1 className="text-7xl font-bold py-3">Let us assist you</h1>
-          <h1 className="text-7xl font-bold py-3">in resolving your issues.</h1>
+          <h1 className="text-7xl font-bold py-3">ให้เราช่วยคุณ</h1>
+          <h1 className="text-7xl font-bold py-3">
+            แก้ทุกปัญหาอย่าง <span className="text-[#C9A55C]">มืออาชีพ</span>
+          </h1>
           <div className="my-25">
               <HomeButton />
           </div>
@@ -33,11 +35,10 @@ export default function Home() {
 
       
 
-      <div className="flex items-center mt-15 justify-center">
-        <div className="w-1/20 border-t border-white"></div>
-        <span className="mx-4 text-white text-xl">ข่าว</span>
-        <div className="w-4/6 border-t border-white"></div>
+      <div className="flex items-center mt-16 justify-center">
+        <div className="w-[87%] border-t-2 border-white"></div>
       </div>
+      <div className="mx-28 mt-2 font-bold text-white text-xl">ข่าว</div>
       <News/>
     </main>
   );

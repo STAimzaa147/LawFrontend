@@ -24,6 +24,7 @@ const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function ForumPage() {
   const [forums, setForums] = useState<ForumPost[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -34,7 +35,6 @@ export default function ForumPage() {
           cache: "no-store",
         });
         const data = await res.json();
-        console.log("Forum Data : ", data);
         if (data.success) {
           setForums(data.data);
         }
@@ -45,6 +45,13 @@ export default function ForumPage() {
 
     fetchForums();
   }, []);
+
+  // Filter forums locally by title or content matching searchTerm (case insensitive)
+  const filteredForums = forums.filter((forum) =>
+    forum.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    forum.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    forum.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleAddForumClick = () => {
     if (session?.user) {
@@ -80,7 +87,21 @@ export default function ForumPage() {
 
   return (
     <main className="max-w-5xl mx-auto p-6">
-      <div className="flex justify-end mb-4">
+      {/* Top bar with search and add button */}
+      <div className="flex justify-end mb-4 gap-4 items-center">
+        <input
+          type="text"
+          placeholder="ค้นหากระทู้..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="p-2 rounded-3xl border border-gray-300 text-black flex-grow min-w-0"
+        />
+        {/* <button
+          onClick={() => setSearchTerm("")}
+          className="bg-gray-200 text-black px-4 py-2 rounded-3xl hover:bg-gray-300 transition"
+        >
+          Clear
+        </button> */}
         <button
           onClick={handleAddForumClick}
           className="bg-white text-black px-4 py-2 rounded-3xl hover:bg-gray-300 transition"
@@ -89,16 +110,17 @@ export default function ForumPage() {
         </button>
       </div>
 
-      {forums.length === 0 ? (
-        <p className="text-center mt-10 text-gray-500">No forum posts available.</p>
+      {/* Show filtered forums */}
+      {filteredForums.length === 0 ? (
+        <p className="text-center mt-10 text-gray-500">No forum posts found.</p>
       ) : (
         <div className="space-y-5 my-10 rounded-md">
-          {forums.map((forum) => (
+          {filteredForums.map((forum) => (
             <div key={forum._id} className="relative">
               {session?.user && session.user.id === forum.poster_id._id && (
                 <div className="absolute top-2 right-2">
                   <ForumPostMenu
-                    onEdit={() => router.push(`/forum/${forum._id}/edit`)} // Adjust edit route if you have one
+                    onEdit={() => router.push(`/forum/${forum._id}/edit`)}
                     onDelete={() => handleDeleteForum(forum._id)}
                   />
                 </div>
