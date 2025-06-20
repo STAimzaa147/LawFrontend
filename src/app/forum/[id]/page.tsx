@@ -1,100 +1,135 @@
-'use client';
+"use client"
 
-import { notFound, useRouter } from "next/navigation";
-import Image from "next/image";
-import { useEffect, useRef , useState } from "react";
-import { useSession } from "next-auth/react";
-import CommentMenu from "@/components/CommentMenu";
-import ForumPostMenu from "@/components/ForumPostMenu";
+import type React from "react"
 
+import { notFound, useRouter } from "next/navigation"
+import Image from "next/image"
+import { useEffect, useRef, useState } from "react"
+import { useSession } from "next-auth/react"
+import CommentMenu from "@/components/CommentMenu"
+import ForumPostMenu from "@/components/ForumPostMenu"
+import LikeButton from "@/components/LikeButton"
+import { Eye, Heart } from "lucide-react"
+import ShareButton from "@/components/ShareButton"
 
 type ForumPost = {
-  _id: string;
-  poster_id: { _id: string; name: string };
-  title: string;
-  content: string;
-  image: string;
-  category: string;
-  createdAt: string;
+  _id: string
+  poster_id: { _id: string; name: string }
+  title: string
+  content: string
+  image: string
+  category: string
+  createdAt: string
   comment_count: number
   like_count: number
-};
+  view_count: number
+}
 
 type Comment = {
-  _id: string;
-  user_id: { _id: string; name: string };
-  content: string;
-  createdAt: string;
-};
+  _id: string
+  user_id: { _id: string; name: string }
+  content: string
+  createdAt: string
+}
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export default function ForumPage({ params }: { params: { id: string } }) {
-  const { data: session } = useSession();
-  const router = useRouter();
+  const { data: session } = useSession()
+  const router = useRouter()
 
-  const [forum, setForum] = useState<ForumPost | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [showCommentBox, setShowCommentBox] = useState(false);
-  const commentInputRef = useRef<HTMLTextAreaElement>(null);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  
+  const [forum, setForum] = useState<ForumPost | null>(null)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState("")
+  const [showCommentBox, setShowCommentBox] = useState(false)
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [recommendedForums, setRecommendedForums] = useState<ForumPost[]>([])
+  const [initiallyLiked, setInitiallyLiked] = useState(false)
+  const [likeCheckLoading, setLikeCheckLoading] = useState(true)
 
   useEffect(() => {
     if (showCommentBox && commentInputRef.current) {
-      commentInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      commentInputRef.current.scrollIntoView({ behavior: "smooth", block: "center" })
     }
-  }, [showCommentBox]);
+  }, [showCommentBox])
 
   useEffect(() => {
     const fetchForum = async () => {
-      const res = await fetch(`${backendUrl}/api/v1/forum/${params.id}`);
-      const data = await res.json();
-      if (data.success) setForum(data.data);
-      else notFound();
-    };
+      const res = await fetch(`${backendUrl}/api/v1/forum/${params.id}`)
+      const data = await res.json()
+      if (data.success) setForum(data.data)
+      else notFound()
+    }
 
     const fetchComments = async () => {
-      const res = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment`);
-      const data = await res.json();
-      if (data.comments) setComments(data.comments);
-      console.log(res);
-    };
+      const res = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment`)
+      const data = await res.json()
+      if (data.comments) setComments(data.comments)
+    }
 
-    fetchForum();
-    fetchComments();
-  }, [params.id]);
+    const checkIfLiked = async () => {
+      if (!session?.accessToken) {
+        setLikeCheckLoading(false)
+        return
+      }
+
+      try {
+        const res = await fetch(`${backendUrl}/api/v1/forum/${params.id}/like`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        })
+
+        // Based on your backend logic:
+        // - 400 status means already liked
+        // - 200 status means can like (not liked yet)
+        if (res.status === 400) {
+          setInitiallyLiked(true)
+        } else if (res.status === 200) {
+          setInitiallyLiked(false)
+        }
+      } catch (error) {
+        console.error("Failed to check like status:", error)
+      } finally {
+        setLikeCheckLoading(false)
+      }
+    }
+
+    fetchForum()
+    fetchComments()
+    checkIfLiked()
+  }, [params.id, session?.accessToken])
 
   useEffect(() => {
     const fetchRecommended = async () => {
       try {
-        const res = await fetch(`${backendUrl}/api/v1/forum?limit=5&sort=latest`); // example endpoint/params
-        const data = await res.json();
-        if (data.success) setRecommendedForums(data.data);
+        const res = await fetch(`${backendUrl}/api/v1/forum?limit=5&sort=latest`)
+        const data = await res.json()
+        if (data.success) setRecommendedForums(data.data)
       } catch (error) {
-        console.error("Failed to fetch recommended forums:", error);
+        console.error("Failed to fetch recommended forums:", error)
       }
-    };
-    fetchRecommended();
-  }, []);
+    }
+    fetchRecommended()
+  }, [])
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!session) {
-      alert("You must be logged in to comment.");
-      router.push("/api/auth/signin");
-      return;
+      alert("You must be logged in to comment.")
+      router.push("/api/auth/signin")
+      return
     }
 
-    if (!newComment.trim()) return;
+    if (!newComment.trim()) return
 
     const url = editingCommentId
       ? `${backendUrl}/api/v1/forum/${params.id}/comment/${editingCommentId}`
-      : `${backendUrl}/api/v1/forum/${params.id}/comment`;
+      : `${backendUrl}/api/v1/forum/${params.id}/comment`
 
-    const method = editingCommentId ? "PUT" : "POST";
+    const method = editingCommentId ? "PUT" : "POST"
 
     const res = await fetch(url, {
       method,
@@ -103,58 +138,56 @@ export default function ForumPage({ params }: { params: { id: string } }) {
         Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify({ content: newComment }),
-    });
+    })
 
     if (res.ok) {
-      setNewComment("");
-      setEditingCommentId(null);
-      setShowCommentBox(false);
+      setNewComment("")
+      setEditingCommentId(null)
+      setShowCommentBox(false)
 
       // Refresh comments
-      const commentsRes = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment`);
-      const data = await commentsRes.json();
+      const commentsRes = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment`)
+      const data = await commentsRes.json()
       if (data.success) {
-        setComments(data.comments);
+        setComments(data.comments)
       }
     } else {
-      alert("Failed to post comment.");
+      alert("Failed to post comment.")
     }
-  };
+  }
 
   const handleEdit = (comment: Comment) => {
-    setShowCommentBox(true);
-    setNewComment(comment.content);
-    setEditingCommentId(comment._id);
-  };
+    setShowCommentBox(true)
+    setNewComment(comment.content)
+    setEditingCommentId(comment._id)
+  }
 
   const handleDelete = async (commentId: string) => {
-    if (!confirm("Are you sure you want to delete this comment?")) return;
+    if (!confirm("Are you sure you want to delete this comment?")) return
 
     const res = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment/${commentId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
       },
-    });
+    })
 
     if (res.ok) {
       // Refresh comments
-      const commentsRes = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment`);
-      const data = await commentsRes.json();
+      const commentsRes = await fetch(`${backendUrl}/api/v1/forum/${params.id}/comment`)
+      const data = await commentsRes.json()
       if (data.success) {
-        setComments(data.comments);
+        setComments(data.comments)
       }
     } else {
-      alert("Failed to delete comment.");
+      alert("Failed to delete comment.")
     }
-  };
-  
-  
-  const [recommendedForums, setRecommendedForums] = useState<ForumPost[]>([]);
-  if (!forum) return <p className="text-center p-6 my-10">Loading...</p>;
-    const filteredRecommended = recommendedForums.filter(
-    (rec) => rec._id !== forum._id
-  );
+  }
+
+  if (!forum) return <p className="text-center p-6 my-10">Loading...</p>
+
+  const filteredRecommended = recommendedForums.filter((rec) => rec._id !== forum._id)
+
   return (
     <>
       {/* Main forum post */}
@@ -165,8 +198,8 @@ export default function ForumPage({ params }: { params: { id: string } }) {
               isOwner={session?.user?.id === forum.poster_id._id}
               onEdit={() => router.push(`/forum/${forum._id}/edit`)}
               onDelete={async () => {
-                const confirmed = confirm("Are you sure you want to delete this post?");
-                if (!confirmed) return;
+                const confirmed = confirm("Are you sure you want to delete this post?")
+                if (!confirmed) return
 
                 try {
                   const res = await fetch(`${backendUrl}/api/v1/forum/${forum._id}`, {
@@ -174,17 +207,17 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                     headers: {
                       Authorization: `Bearer ${session?.accessToken}`,
                     },
-                  });
+                  })
 
                   if (res.ok) {
-                    alert("Forum post deleted successfully.");
-                    router.push("/forum");
+                    alert("Forum post deleted successfully.")
+                    router.push("/forum")
                   } else {
-                    alert("Failed to delete forum post.");
+                    alert("Failed to delete forum post.")
                   }
                 } catch (error) {
-                  console.error("Error deleting forum post:", error);
-                  alert("An error occurred while deleting the forum post.");
+                  console.error("Error deleting forum post:", error)
+                  alert("An error occurred while deleting the forum post.")
                 }
               }}
               onReport={() => alert("Reported!")}
@@ -192,19 +225,43 @@ export default function ForumPage({ params }: { params: { id: string } }) {
           </div>
           <h1 className="text-3xl text-black font-bold mb-4">{forum.title}</h1>
         </div>
-        <div className="text-gray-600 text-sm mb-2">
-          Posted by {forum.poster_id.name} on{" "}
-          {new Date(forum.createdAt).toLocaleString("th-TH", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}
+
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="text-gray-600 text-sm mb-2">
+              Posted by {forum.poster_id.name} on{" "}
+              {new Date(forum.createdAt).toLocaleString("th-TH", {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </div>
+            <div className="text-blue-700 font-medium">{forum.category}</div>
+          </div>
+
+          {/* Like Button */}
+          <div className="flex items-center gap-4">
+            {session && !likeCheckLoading && (
+              <LikeButton forumId={forum._id} initialCount={forum.like_count} initiallyLiked={initiallyLiked} />
+            )}
+            {!session && (
+              <div className="flex items-center gap-2 text-gray-500">
+                <Heart className="w-4 h-4" />
+                <span className="text-sm">{forum.like_count}</span>
+              </div>
+            )}
+            <ShareButton/>
+            <div className="flex items-center gap-2 text-gray-500">
+              <Eye className="w-4 h-4" />
+              <span className="text-sm">{forum.view_count}</span>
+            </div>
+            
+          </div>
         </div>
-        <div className="text-blue-700 font-medium mb-6">{forum.category}</div>
 
         {forum.image && (
           <div className="relative w-full max-w-2xl h-80 mx-auto rounded-md overflow-hidden mb-6">
             <Image
-              src={forum.image}
+              src={forum.image || "/placeholder.svg"}
               alt={forum.title}
               fill
               className="object-cover"
@@ -243,17 +300,16 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                       })}
                     </span>
 
-                    
-                      <div className="absolute top-2 right-2">
-                        <CommentMenu
-                          isOwner={session?.user?.id === comment.user_id._id}
-                          onEdit={() => handleEdit(comment)}
-                          onDelete={() => handleDelete(comment._id)}
-                          onReport={() => alert("Reported comment!")}
-                        />
-                      </div>
+                    <div className="absolute top-2 right-2">
+                      <CommentMenu
+                        isOwner={session?.user?.id === comment.user_id._id}
+                        onEdit={() => handleEdit(comment)}
+                        onDelete={() => handleDelete(comment._id)}
+                        onReport={() => alert("Reported comment!")}
+                      />
+                    </div>
                   </li>
-                ) : null
+                ) : null,
               )}
             </ul>
           )}
@@ -280,9 +336,9 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowCommentBox(false);
-                    setNewComment("");
-                    setEditingCommentId(null);
+                    setShowCommentBox(false)
+                    setNewComment("")
+                    setEditingCommentId(null)
                   }}
                   className="text-sm px-4 py-1 rounded-3xl bg-gray-300 text-black hover:bg-gray-400"
                 >
@@ -312,7 +368,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                 {f.image && (
                   <div className="relative w-16 h-16 flex-shrink-0 rounded overflow-hidden">
                     <Image
-                      src={f.image}
+                      src={f.image || "/placeholder.svg"}
                       alt={f.title}
                       fill
                       className="object-cover"
@@ -336,5 +392,5 @@ export default function ForumPage({ params }: { params: { id: string } }) {
         )}
       </div>
     </>
-  );
+  )
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Search, Plus, MessageCircle, Heart} from "lucide-react"
+import { Search, Plus, MessageCircle, Heart, Eye} from "lucide-react"
 import ForumPostMenu from "@/components/ForumPostMenu"
 import ShareButton from "@/components/ShareButton"
 
@@ -21,6 +21,7 @@ type ForumPost = {
   createdAt: string
   comment_count: number
   like_count: number
+  view_count: number
 }
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
@@ -180,6 +181,10 @@ export default function ForumPage() {
                               <span className="text-sm">{forum.comment_count}</span>
                             </div>
                             <ShareButton/>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Eye className="w-4 h-4" />
+                              <span className="text-sm">{forum.view_count}</span>
+                            </div>
                           </div>
                           <span className="text-sm text-gray-500">
                             Posted :{" "}

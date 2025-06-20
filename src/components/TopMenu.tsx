@@ -18,8 +18,6 @@ export default function TopMenu(){
                     <Image src={'/img/Logo.jpg'} className="object-contain" alt="logo" width={70} height={20} sizes="100vh"/>
                 </Link>
                 
-            </div>
-            <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-row items-center gap-4">
                 <TopMenuItem title="กระทู้" pageRef="/forum"/>
                 {
                     session ? (
