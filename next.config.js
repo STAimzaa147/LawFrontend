@@ -3,7 +3,8 @@ const nextConfig = {
   images: {
     domains: [
       'lh3.googleusercontent.com',
-      'lawprojectdemo.s3.ap-southeast-1.amazonaws.com'
+      'lawprojectdemo.s3.ap-southeast-1.amazonaws.com',
+      'localhost'
     ],
   },
 };

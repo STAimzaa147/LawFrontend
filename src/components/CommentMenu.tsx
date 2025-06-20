@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { FiEdit } from "react-icons/fi"; // <-- Import pencil icon
+import { FiEdit } from "react-icons/fi"; // Pencil icon
 
 function CommentMenu({
   onEdit,
   onDelete,
+  onReport,
+  isOwner,
 }: {
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onReport: () => void;
+  isOwner: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -30,26 +34,40 @@ function CommentMenu({
       >
         ⋯
       </button>
+
       {open && (
         <div className="absolute right-0 mt-1 w-28 bg-white border rounded shadow z-10">
+          {isOwner && (
+            <>
+              <button
+                onClick={() => {
+                  onEdit?.();
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 w-full text-black text-left px-4 py-2 text-sm hover:bg-gray-100"
+              >
+                <FiEdit size={16} />
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  onDelete?.();
+                  setOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-black"
+              >
+                🗑️ Delete
+              </button>
+            </>
+          )}
           <button
             onClick={() => {
-              onEdit();
-              setOpen(false);
-            }}
-            className="flex items-center gap-2 w-full text-black text-left px-4 py-2 text-sm hover:bg-gray-100"
-          >
-            <FiEdit size={16} />
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              onDelete();
+              onReport();
               setOpen(false);
             }}
             className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-black"
           >
-            🗑️ Delete
+            🚩 Report
           </button>
         </div>
       )}

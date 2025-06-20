@@ -1,7 +1,7 @@
 'use client';
-import { AiOutlineSearch } from "react-icons/ai";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 
 
 export default function SearchBar() {
@@ -39,21 +39,16 @@ export default function SearchBar() {
 
   return (
     <form className="p-10 w-[1200px] relative place-self-center z-10" ref={wrapperRef}>
-      <div className="relative">
-        <input
-          type="search"
-          placeholder="ค้นหาคดี"
-          className="w-full p-4 rounded-full bg-white text-black"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-        />
-        <button
-          type="submit"
-          className="absolute right-1 top-1/2 -translate-y-1/2 p-4 bg-white text-[#353C63] rounded-full"
-        >
-          <AiOutlineSearch />
-        </button>
+      <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="ค้นหาคดี"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onFocus={()=> setIsFocused(true)}
+              className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
 
         {isFocused && (
           <ul className="absolute z-[100] mt-2 w-full bg-white border border-gray-300 rounded-xl shadow-md">
@@ -78,3 +73,4 @@ export default function SearchBar() {
     </form>
   );
 }
+

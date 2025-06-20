@@ -16,6 +16,8 @@ type ForumPost = {
   image: string;
   category: string;
   createdAt: string;
+  comment_count: number
+  like_count: number
 };
 
 type Comment = {
@@ -158,37 +160,36 @@ export default function ForumPage({ params }: { params: { id: string } }) {
       {/* Main forum post */}
       <div className="max-w-4xl mx-auto mt-24 p-6 bg-white rounded shadow">
         <div className="relative">
-          {session?.user?.id === forum.poster_id._id && (
-            <div className="absolute top-0 right-0">
-              <ForumPostMenu
-                onEdit={() => router.push(`/forum/${forum._id}/edit`)}
-                onDelete={async () => {
-                  const confirmed = confirm("Are you sure you want to delete this post?");
-                  if (!confirmed) return;
+          <div className="absolute top-0 right-0">
+            <ForumPostMenu
+              isOwner={session?.user?.id === forum.poster_id._id}
+              onEdit={() => router.push(`/forum/${forum._id}/edit`)}
+              onDelete={async () => {
+                const confirmed = confirm("Are you sure you want to delete this post?");
+                if (!confirmed) return;
 
-                  try {
-                    const res = await fetch(`${backendUrl}/api/v1/forum/${forum._id}`, {
-                      method: "DELETE",
-                      headers: {
-                        Authorization: `Bearer ${session?.accessToken}`,
-                      },
-                    });
+                try {
+                  const res = await fetch(`${backendUrl}/api/v1/forum/${forum._id}`, {
+                    method: "DELETE",
+                    headers: {
+                      Authorization: `Bearer ${session?.accessToken}`,
+                    },
+                  });
 
-                    if (res.ok) {
-                      alert("Forum post deleted successfully.");
-                      router.push("/forum");
-                    } else {
-                      alert("Failed to delete forum post.");
-                    }
-                  } catch (error) {
-                    console.error("Error deleting forum post:", error);
-                    alert("An error occurred while deleting the forum post.");
+                  if (res.ok) {
+                    alert("Forum post deleted successfully.");
+                    router.push("/forum");
+                  } else {
+                    alert("Failed to delete forum post.");
                   }
-                }}
-              />
-            </div>
-          )}
-
+                } catch (error) {
+                  console.error("Error deleting forum post:", error);
+                  alert("An error occurred while deleting the forum post.");
+                }
+              }}
+              onReport={() => alert("Reported!")}
+            />
+          </div>
           <h1 className="text-3xl text-black font-bold mb-4">{forum.title}</h1>
         </div>
         <div className="text-gray-600 text-sm mb-2">
@@ -217,7 +218,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
         {/* Comments */}
         <section className="mt-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl text-black font-semibold">ความคิดเห็น</h2>
+            <h2 className="text-2xl text-black font-semibold">({forum.comment_count}) ความคิดเห็น</h2>
             <button
               onClick={() => setShowCommentBox((prev) => !prev)}
               className="px-10 py-2 text-sm text-white bg-[#353C63]/80 rounded-3xl hover:underline"
@@ -242,14 +243,15 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                       })}
                     </span>
 
-                    {session?.user?.id === comment.user_id._id && (
+                    
                       <div className="absolute top-2 right-2">
                         <CommentMenu
+                          isOwner={session?.user?.id === comment.user_id._id}
                           onEdit={() => handleEdit(comment)}
                           onDelete={() => handleDelete(comment._id)}
+                          onReport={() => alert("Reported comment!")}
                         />
                       </div>
-                    )}
                   </li>
                 ) : null
               )}

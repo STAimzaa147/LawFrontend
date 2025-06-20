@@ -1,70 +1,75 @@
-"use client";
+"use client"
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import ForumPostMenu from "@/components/ForumPostMenu";
+import { useEffect, useState } from "react"
+import Image from "next/image"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { Search, Plus, MessageCircle, Heart} from "lucide-react"
+import ForumPostMenu from "@/components/ForumPostMenu"
+import ShareButton from "@/components/ShareButton"
 
 type ForumPost = {
-  _id: string;
+  _id: string
   poster_id: {
-    _id: string;
-    name: string;
-  };
-  title: string;
-  content: string;
-  image: string;
-  category: string;
-  createdAt: string;
-};
+    _id: string
+    name: string
+  }
+  title: string
+  content: string
+  image: string
+  category: string
+  createdAt: string
+  comment_count: number
+  like_count: number
+}
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
 export default function ForumPage() {
-  const [forums, setForums] = useState<ForumPost[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const { data: session } = useSession();
-  const router = useRouter();
+  const [forums, setForums] = useState<ForumPost[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const { data: session } = useSession()
+  const router = useRouter()
+  
 
   useEffect(() => {
     const fetchForums = async () => {
       try {
         const res = await fetch(`${backendUrl}/api/v1/forum`, {
           cache: "no-store",
-        });
-        const data = await res.json();
+        })
+        const data = await res.json()
         if (data.success) {
-          setForums(data.data);
+          setForums(data.data)
         }
       } catch (error) {
-        console.error("Error fetching forums:", error);
+        console.error("Error fetching forums:", error)
       }
-    };
+    }
 
-    fetchForums();
-  }, []);
+    fetchForums()
+  }, [])
 
   // Filter forums locally by title or content matching searchTerm (case insensitive)
-  const filteredForums = forums.filter((forum) =>
-    forum.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    forum.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    forum.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredForums = forums.filter(
+    (forum) =>
+      forum.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      forum.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      forum.category.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
 
   const handleAddForumClick = () => {
     if (session?.user) {
-      router.push("/forum/create");
+      router.push("/forum/create")
     } else {
-      alert("You must be logged in to add a forum.");
-      router.push("/api/auth/signin");
+      alert("You must be logged in to add a forum.")
+      router.push("/api/auth/signin")
     }
-  };
+  }
 
   const handleDeleteForum = async (forumId: string) => {
-    const confirmed = confirm("Are you sure you want to delete this forum?");
-    if (!confirmed) return;
+    const confirmed = confirm("Are you sure you want to delete this forum?")
+    if (!confirmed) return
 
     try {
       const res = await fetch(`${backendUrl}/api/v1/forum/${forumId}`, {
@@ -72,97 +77,128 @@ export default function ForumPage() {
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
         },
-      });
+      })
 
       if (res.ok) {
-        setForums((prev) => prev.filter((f) => f._id !== forumId));
+        setForums((prev) => prev.filter((f) => f._id !== forumId))
       } else {
-        alert("Failed to delete forum.");
+        alert("Failed to delete forum.")
       }
     } catch (error) {
-      console.error("Error deleting forum:", error);
-      alert("An error occurred while deleting the forum.");
+      console.error("Error deleting forum:", error)
+      alert("An error occurred while deleting the forum.")
     }
-  };
+  }
 
   return (
-    <main className="max-w-5xl mx-auto p-6">
-      {/* Top bar with search and add button */}
-      <div className="flex justify-end mb-4 gap-4 items-center">
-        <input
-          type="text"
-          placeholder="ค้นหากระทู้..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="p-2 rounded-3xl border border-gray-300 text-black flex-grow min-w-0"
-        />
-        {/* <button
-          onClick={() => setSearchTerm("")}
-          className="bg-gray-200 text-black px-4 py-2 rounded-3xl hover:bg-gray-300 transition"
-        >
-          Clear
-        </button> */}
-        <button
-          onClick={handleAddForumClick}
-          className="bg-white text-black px-4 py-2 rounded-3xl hover:bg-gray-300 transition"
-        >
-          + เพิ่มกระทู้
-        </button>
-      </div>
+    <div className="min-h-screen bg-slate-800">
+      
 
-      {/* Show filtered forums */}
-      {filteredForums.length === 0 ? (
-        <p className="text-center mt-10 text-gray-500">No forum posts found.</p>
-      ) : (
-        <div className="space-y-5 my-10 rounded-md">
-          {filteredForums.map((forum) => (
-            <div key={forum._id} className="relative">
-              {session?.user && session.user.id === forum.poster_id._id && (
-                <div className="absolute top-2 right-2">
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto p-6">
+        {/* Search and Add Button */}
+        <div className="flex gap-4 mb-8">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="ค้นหา"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={handleAddForumClick}
+            className="bg-white text-gray-700 px-6 py-3 rounded-full hover:bg-gray-50 transition flex items-center gap-2 font-medium shadow-sm border"
+          >
+            <Plus className="w-5 h-5" />
+            ตั้งกระทู้ใหม่
+          </button>
+        </div>
+
+        {/* Forum Posts */}
+        {filteredForums.length === 0 ? (
+          <div className="text-center mt-20">
+            <p className="text-gray-400 text-lg">ไม่พบกระทู้</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredForums.map((forum) => (
+              <div key={forum._id} className="relative">
+                <div className="absolute top-4 right-4 z-10">
                   <ForumPostMenu
+                    onReport={() => alert("Reported!")}
                     onEdit={() => router.push(`/forum/${forum._id}/edit`)}
                     onDelete={() => handleDeleteForum(forum._id)}
+                    isOwner={session?.user?.id === forum.poster_id._id}
                   />
                 </div>
-              )}
+                <div
+                  onClick={() => router.push(`/forum/${forum._id}`)}
+                  className="cursor-pointer"
+                >
+                  <article className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow p-6">
+                    <div className="flex gap-6">
+                      {/* Image */}
+                      {forum.image && (
+                        <div className="relative w-36 h-34 rounded-xl overflow-hidden flex-shrink-0">
+                          <Image
+                            src={forum.image || "/placeholder.svg"}
+                            alt={forum.title}
+                            fill
+                            className="object-cover"
+                            sizes="128px"
+                          />
+                        </div>
+                      )}
 
-              <Link href={`/forum/${forum._id}`} className="block">
-                <article className="bg-white border rounded-lg shadow-sm p-6 flex flex-col md:flex-row gap-6 hover:shadow-md transition cursor-pointer">
-                  {forum.image && (
-                    <div className="relative w-full md:w-64 h-40 rounded-md overflow-hidden flex-shrink-0">
-                      <Image
-                        src={forum.image}
-                        alt={forum.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, 256px"
-                      />
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{forum.title}</h2>
+                        <p className="text-gray-600 text-sm line-clamp-2 mb-4">{forum.content}</p>
+
+                        {/* Author and Date */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-medium">
+                              {forum.poster_id?.name?.charAt(0) || "U"}
+                            </span>
+                          </div>
+                          <span className="text-sm text-gray-600">{forum.poster_id?.name || "Unknown"}</span>
+                        </div>
+
+                        {/* Actions and Date */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Heart className="w-4 h-4" />
+                              <span className="text-sm">{forum.like_count}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <MessageCircle className="w-4 h-4" />
+                              <span className="text-sm">{forum.comment_count}</span>
+                            </div>
+                            <ShareButton/>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            Posted :{" "}
+                            {new Date(forum.createdAt).toLocaleDateString("th-TH", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex flex-col justify-between flex-grow">
-                    <div>
-                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">{forum.title}</h2>
-                      <p className="text-gray-700 line-clamp-3 mb-4">{forum.content}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
-                      <span className="capitalize bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {forum.category}
-                      </span>
-                      <span>
-                        Posted by {forum.poster_id?.name || "Unknown"} on{" "}
-                        {new Date(forum.createdAt).toLocaleString("th-TH", {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              </Link>
-            </div>
-          ))}
-        </div>
-      )}
-    </main>
-  );
+                  </article>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  )
 }

@@ -11,12 +11,15 @@ export default function TopMenu(){
     const { data: session } = useSession();
     console.log("User Data : ",session?.user);
     return(
-        <div className="bg-white h-[70px] top-0 left-0 right-0 z-30 fixed border-y border-solid border-gray-100 items-center flex flex-row justify-between">
+        <div className="bg-white h-[80px] top-0 left-0 right-0 z-30 fixed border-y border-solid border-gray-100 items-center flex flex-row justify-between">
             {/* Left Section */}
-            <div className="flex flex-row item-center gap-4">
+            <div className="flex flex-row item-center gap-4 m-2">
                 <Link href="/">
                     <Image src={'/img/Logo.jpg'} className="object-contain" alt="logo" width={70} height={20} sizes="100vh"/>
                 </Link>
+                
+            </div>
+            <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-row items-center gap-4">
                 <TopMenuItem title="กระทู้" pageRef="/forum"/>
                 {
                     session ? (
