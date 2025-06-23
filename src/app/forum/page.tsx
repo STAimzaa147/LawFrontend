@@ -31,11 +31,13 @@ export default function ForumPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const { data: session } = useSession()
   const router = useRouter()
-  
+  const [loading, setLoading] = useState(true)
+
 
   useEffect(() => {
     const fetchForums = async () => {
       try {
+        setLoading(true)
         const res = await fetch(`${backendUrl}/api/v1/forum`, {
           cache: "no-store",
         })
@@ -45,6 +47,8 @@ export default function ForumPage() {
         }
       } catch (error) {
         console.error("Error fetching forums:", error)
+      }finally {
+        setLoading(false)
       }
     }
 
@@ -119,7 +123,12 @@ export default function ForumPage() {
         </div>
 
         {/* Forum Posts */}
-        {filteredForums.length === 0 ? (
+        {loading ? (
+          <div className="text-center mt-20 text-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-white border-opacity-50 mx-auto mb-4"></div>
+            <p className="text-gray-300">กำลังโหลดกระทู้...</p>
+          </div>
+        ) : filteredForums.length === 0 ? (
           <div className="text-center mt-20">
             <p className="text-gray-400 text-lg">ไม่พบกระทู้</p>
           </div>
