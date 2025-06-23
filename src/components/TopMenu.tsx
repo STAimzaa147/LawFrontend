@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 export default function TopMenu(){
 
     const { data: session } = useSession();
+    console.log("token : ", session?.accessToken);
     console.log("User Data : ",session?.user);
     return(
         <div className="bg-white h-[80px] top-0 left-0 right-0 z-30 fixed border-y border-solid border-gray-100 items-center flex flex-row justify-between">

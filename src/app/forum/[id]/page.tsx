@@ -84,11 +84,10 @@ export default function ForumPage({ params }: { params: { id: string } }) {
         // Based on your backend logic:
         // - 400 status means already liked
         // - 200 status means can like (not liked yet)
-        if (res.status === 400) {
-          setInitiallyLiked(true)
-        } else if (res.status === 200) {
-          setInitiallyLiked(false)
-        }
+        if (res.ok) {
+        const data = await res.json()
+        setInitiallyLiked(data.liked || false);
+    }
       } catch (error) {
         console.error("Failed to check like status:", error)
       } finally {

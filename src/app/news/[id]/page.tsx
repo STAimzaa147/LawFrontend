@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import ShareButton from "@/components/ShareButton"
+import NewsLikeButton from "@/components/news-like-button"
 import { Eye, Heart } from "lucide-react"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions"
 
 type NewsItem = {
   _id: string
@@ -23,7 +26,6 @@ async function getNewsById(id: string): Promise<NewsItem | null> {
       cache: "no-store",
     })
     const data = await res.json()
-    console.log("Get big news", data)
     if (data.success) {
       return data.data
     }
@@ -33,10 +35,37 @@ async function getNewsById(id: string): Promise<NewsItem | null> {
   return null
 }
 
+async function checkIfNewsLiked(newsId: string, accessToken: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/news/${newsId}/like`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      return data.liked || false
+    }
+  } catch (error) {
+    console.error("Failed to check like status:", error)
+  }
+  return false
+}
+
 export default async function NewsDetailPage({ params }: { params: { id: string } }) {
   const newsItem = await getNewsById(params.id)
+  
+  const session = await getServerSession(authOptions)
+  console.log("check session",session?.accessToken)
 
   if (!newsItem) return notFound()
+
+  // Check if user has liked this news item
+  let initiallyLiked = false
+  if (session?.accessToken) {
+    initiallyLiked = await checkIfNewsLiked(params.id, session.accessToken)
+  }
 
   return (
     <main className="min-h-screen bg-[#1A2341] text-white px-6 py-10">
@@ -56,12 +85,20 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
             </div>
 
             <div className="flex items-center gap-4">
-              
-              {/* Like Count */}
-              <div className="flex items-center gap-1">
-                <Heart className="w-4 h-4 text-gray-600" />
-                <span className="text-gray-600">{newsItem.like_count || 0}</span>
-              </div>
+              {/* Like Button - Interactive for logged in users */}
+              {session ? (
+                <NewsLikeButton
+                  newsId={newsItem._id}
+                  initialCount={newsItem.like_count || 0}
+                  initiallyLiked={initiallyLiked}
+                />
+              ) : (
+                /* Static like count for non-logged in users */
+                <div className="flex items-center gap-1">
+                  <Heart className="w-4 h-4 text-gray-600" />
+                  <span className="text-gray-600">{newsItem.like_count || 0}</span>
+                </div>
+              )}
 
               {/* Share Button */}
               <ShareButton />
@@ -71,7 +108,6 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
                 <Eye className="w-4 h-4 text-gray-600" />
                 <span className="text-gray-600">{newsItem.view_count || 0}</span>
               </div>
-              
             </div>
           </div>
           <div
@@ -114,7 +150,6 @@ async function OtherNews({ currentId }: { currentId: string }) {
   const data = await res.json()
 
   if (!data.success) return null
-  console.log("Get small news", data)
   const otherNews: NewsItem[] = data.data.filter((item: NewsItem) => item._id !== currentId).slice(0, 5)
 
   return (
