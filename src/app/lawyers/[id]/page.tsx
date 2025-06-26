@@ -153,35 +153,34 @@ export default async function LawyerProfilePage({
 
                 {/* Contact Button */}
                 <button className="bg-slate-700 text-white px-8 py-3 rounded-full font-medium hover:bg-slate-800 transition-colors">
-                  Contact
+                  ติดต่อทนาย
                 </button>
               </div>
             </div>
 
             {/* Bio Card */}
             <div className="bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">About {user.name}</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">เกี่ยวกับ {user.name}</h2>
               <div className="space-y-4">
                 <p className="text-gray-700 text-sm leading-relaxed">{lawyer.summary}</p>
 
                 <div className="pt-4 border-t border-gray-200">
-                  <h3 className="font-semibold text-gray-900 mb-3">Professional Background</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3">ประสบการณ์การทำงาน</h3>
                   <div className="space-y-2">
                     <div className="flex items-start gap-3">
                       <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-gray-700 text-sm">Law Firm: {lawyer.lawfirm_name}</span>
+                      <span className="text-gray-700 text-sm">สำนักงานกฎหมาย: {lawyer.lawfirm_name}</span>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
                       <span className="text-gray-700 text-sm">
-                        Specializes in {lawyer.civilCase_specialized.length + lawyer.criminalCase_specialized.length}{" "}
-                        areas of law
+                        ความเชี่ยวชาญด้านกฎหมายทั้งหมด {lawyer.civilCase_specialized.length + lawyer.criminalCase_specialized.length}{" "}
                       </span>
                     </div>
                     <div className="flex items-start gap-3">
                       <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
                       <span className="text-gray-700 text-sm">
-                        {lawyer.verificationDocs.length} verification documents on file
+                        เอกสารยืนยันตัวตนทั้งหมด {lawyer.verificationDocs.length} รายการ
                       </span>
                     </div>
                   </div>
@@ -194,19 +193,19 @@ export default async function LawyerProfilePage({
           <div className="col-span-2 space-y-6">
             {/* License Card */}
             <div className="bg-white rounded-3xl p-8 shadow-lg">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">License</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">ใบอนุญาต</h2>
 
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 border-2 border-purple-400 rounded-lg flex items-center justify-center flex-shrink-0">
                   <User className="w-8 h-8 text-gray-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-lg mb-1">Bar Association</h3>
+                  <h3 className="font-semibold text-gray-900 text-lg mb-1">สภาทนายความ</h3>
                   <p className="text-gray-700 text-base mb-2">
-                    {lawyer.is_verified_by_council ? "Verified Member Certificate" : "Membership Verification Pending"}
+                    {lawyer.is_verified_by_council ? "ได้รับการยืนยันเป็นสมาชิกแล้ว" : "รอการตรวจสอบสมาชิกภาพ"}
                   </p>
                   <p className="text-gray-500 text-sm">
-                    License Number - {lawyer.has_law_license ? "444/2024" : "Pending"}
+                    เลขที่ใบอนุญาต - {lawyer.has_law_license ? "444/2024" : "รอดำเนินการ"}
                   </p>
                 </div>
               </div>
@@ -214,19 +213,17 @@ export default async function LawyerProfilePage({
 
             {/* Consultation Rates Card */}
             <div className="bg-white rounded-3xl p-8 shadow-lg">
-              <h3 className="font-bold text-gray-900 text-xl mb-6">Lawyer Consultation Rates</h3>
+              <h3 className="font-bold text-gray-900 text-xl mb-6">อัตราค่าปรึกษากฎหมาย</h3>
               <div className="space-y-4">
                 <div className="text-gray-700">
-                  <span className="text-sm">Consultation Rate - </span>
-                  <span className="text-sm">Initial consultation and legal advice (per hour): </span>
+                  <span className="text-sm">ค่าปรึกษาเบื้องต้นและให้คำแนะนำทางกฎหมาย (ต่อชั่วโมง): </span>
                   <span className="font-bold text-base">
                     ${lawyer.consultationRate.min} - ${lawyer.consultationRate.max}
                   </span>
                 </div>
                 {lawyer.documentDeliveryRate && (
                   <div className="text-gray-700">
-                    <span className="text-sm">Document Services - </span>
-                    <span className="text-sm">Document preparation and review: </span>
+                    <span className="text-sm">บริการเอกสาร - การจัดเตรียมและตรวจสอบเอกสาร: </span>
                     <span className="font-bold text-base">
                       ${lawyer.documentDeliveryRate.min} - ${lawyer.documentDeliveryRate.max}
                     </span>
@@ -238,7 +235,7 @@ export default async function LawyerProfilePage({
             {/* Reviews Card */}
             <div className="bg-white rounded-3xl p-8 shadow-lg relative">
               <div className="flex items-center gap-2 mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Reviews</h2>
+                <h2 className="text-xl font-bold text-gray-900">รีวิว</h2>
                 <span className="text-gray-500">(1)</span>
               </div>
 
@@ -255,18 +252,18 @@ export default async function LawyerProfilePage({
                   <div className="text-2xl">👨‍💼</div>
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-2">Excellent Professional Service</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">บริการอย่างมืออาชีพยอดเยี่ยม</h4>
                   <p className="text-gray-600 text-sm leading-relaxed">
                     {lawyer.summary.length > 100 ? lawyer.summary.substring(0, 100) + "..." : lawyer.summary}
                   </p>
-                  <button className="text-blue-500 text-sm mt-2 hover:underline">Read more</button>
+                  <button className="text-blue-500 text-sm mt-2 hover:underline">อ่านเพิ่มเติม</button>
                 </div>
               </div>
 
               {/* Contact Button */}
               <div className="absolute bottom-8 right-8">
                 <button className="bg-slate-700 text-white px-6 py-3 rounded-full font-medium hover:bg-slate-800 transition-colors flex items-center gap-2">
-                  <span>Contact Lawyer</span>
+                  <span>ปรึกษากับทนาย</span>
                   <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
                     <Phone className="w-3 h-3" />
                   </div>
