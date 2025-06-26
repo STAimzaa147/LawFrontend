@@ -2,9 +2,10 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import ShareButton from "@/components/ShareButton"
 import NewsLikeButton from "@/components/news-like-button"
-import { Eye, Heart } from "lucide-react"
+import { Eye, Heart, ArrowLeft } from "lucide-react"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions"
+import Link from "next/link"
 
 type NewsItem = {
   _id: string
@@ -55,9 +56,9 @@ async function checkIfNewsLiked(newsId: string, accessToken: string): Promise<bo
 
 export default async function NewsDetailPage({ params }: { params: { id: string } }) {
   const newsItem = await getNewsById(params.id)
-  
+
   const session = await getServerSession(authOptions)
-  console.log("check session",session?.accessToken)
+  console.log("check session", session?.accessToken)
 
   if (!newsItem) return notFound()
 
@@ -69,74 +70,86 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
 
   return (
     <main className="min-h-screen bg-[#1A2341] text-white px-6 py-10">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Main Article */}
-        <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
-          <h1 className="text-2xl md:text-3xl font-semibold mb-4 ml-14">{newsItem.title}</h1>
-          <div className="flex justify-between items-center text-xs text-gray-500 my-5 px-16">
-            <div>
-              Posted on{" "}
-              <time dateTime={newsItem.createdAt}>
-                {new Date(newsItem.createdAt).toLocaleString("th-TH", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </time>
-            </div>
+      <div className="max-w-7xl mx-auto">
+        {/* Back Button and Category Menu */}
+        <div className="mb-6">
+          <Link href="/news">
+            <button className="mb-4 bg-white text-black border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back to News
+            </button>
+          </Link>
+        </div>
 
-            <div className="flex items-center gap-4">
-              {/* Like Button - Interactive for logged in users */}
-              {session ? (
-                <NewsLikeButton
-                  newsId={newsItem._id}
-                  initialCount={newsItem.like_count || 0}
-                  initiallyLiked={initiallyLiked}
-                />
-              ) : (
-                /* Static like count for non-logged in users */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Main Article */}
+          <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
+            <h1 className="text-2xl md:text-3xl font-semibold mb-4 ml-14">{newsItem.title}</h1>
+            <div className="flex justify-between items-center text-xs text-gray-500 my-5 px-16">
+              <div>
+                Posted on{" "}
+                <time dateTime={newsItem.createdAt}>
+                  {new Date(newsItem.createdAt).toLocaleString("th-TH", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* Like Button - Interactive for logged in users */}
+                {session ? (
+                  <NewsLikeButton
+                    newsId={newsItem._id}
+                    initialCount={newsItem.like_count || 0}
+                    initiallyLiked={initiallyLiked}
+                  />
+                ) : (
+                  /* Static like count for non-logged in users */
+                  <div className="flex items-center gap-1">
+                    <Heart className="w-4 h-4 text-gray-600" />
+                    <span className="text-gray-600">{newsItem.like_count || 0}</span>
+                  </div>
+                )}
+
+                {/* Share Button */}
+                <ShareButton />
+
+                {/* View Count */}
                 <div className="flex items-center gap-1">
-                  <Heart className="w-4 h-4 text-gray-600" />
-                  <span className="text-gray-600">{newsItem.like_count || 0}</span>
+                  <Eye className="w-4 h-4 text-gray-600" />
+                  <span className="text-gray-600">{newsItem.view_count || 0}</span>
                 </div>
-              )}
-
-              {/* Share Button */}
-              <ShareButton />
-
-              {/* View Count */}
-              <div className="flex items-center gap-1">
-                <Eye className="w-4 h-4 text-gray-600" />
-                <span className="text-gray-600">{newsItem.view_count || 0}</span>
               </div>
             </div>
-          </div>
-          <div
-            className="relative w-full max-w-2xl h-80 mx-auto rounded-2xl overflow-hidden mb-12"
-            style={{ paddingTop: "56.25%" /* 9/16 ratio */ }}
-          >
-            <Image
-              src={newsItem.image || "/placeholder.svg"}
-              alt={newsItem.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 1024px"
-            />
-          </div>
-
-          <p className="text-sm text-gray-700 whitespace-pre-line px-16">{newsItem.content}</p>
-
-          {/* Tags section */}
-          {newsItem.category && (
-            <div className="mt-14 px-16">
-              <span className="bg-gray-200 text-black px-3 py-1 rounded-3xl text-sm font-medium">
-                {newsItem.category}
-              </span>
+            <div
+              className="relative w-full max-w-2xl h-80 mx-auto rounded-2xl overflow-hidden mb-12"
+              style={{ paddingTop: "56.25%" /* 9/16 ratio */ }}
+            >
+              <Image
+                src={newsItem.image || "/placeholder.svg"}
+                alt={newsItem.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 1024px"
+              />
             </div>
-          )}
-        </section>
 
-        {/* Sidebar */}
-        <OtherNews currentId={newsItem._id} />
+            <p className="text-sm text-gray-700 whitespace-pre-line px-16">{newsItem.content}</p>
+
+            {/* Tags section */}
+            {newsItem.category && (
+              <div className="mt-14 px-16">
+                <span className="bg-gray-200 text-black px-3 py-1 rounded-3xl text-sm font-medium">
+                  {Array.isArray(newsItem.category) ? newsItem.category.join(", ") : newsItem.category}
+                </span>
+              </div>
+            )}
+          </section>
+
+          {/* Sidebar */}
+          <OtherNews currentId={newsItem._id} />
+        </div>
       </div>
     </main>
   )
@@ -154,8 +167,9 @@ async function OtherNews({ currentId }: { currentId: string }) {
 
   return (
     <aside className="space-y-4">
+      <h3 className="text-white font-semibold text-lg mb-4">Related News</h3>
       {otherNews.map((item: NewsItem) => (
-        <a
+        <Link
           key={item._id}
           href={`/news/${item._id}`}
           className="flex flex-col bg-white/80 text-black rounded-lg shadow-md hover:bg-gray-100 transition min-h-[100px]"
@@ -179,7 +193,7 @@ async function OtherNews({ currentId }: { currentId: string }) {
               </time>
             </div>
           </div>
-        </a>
+        </Link>
       ))}
     </aside>
   )
