@@ -4,6 +4,7 @@ interface Forum {
   _id: string
   title: string
   content: string
+  image: string
   poster_id: {
     name: string
   }
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
         forum.poster_id?.name?.toLowerCase().includes(search)
       );
     });
-
+    console.log(filteredForums);
     return NextResponse.json(filteredForums);
   } catch (error) {
     console.error("Error fetching forums:", error);

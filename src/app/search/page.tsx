@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Search, Users, FileText, Scale } from "lucide-react"
 import Link from "next/link";
+import Image from "next/image";
 
 interface Lawyer {
    _id:
@@ -35,6 +36,7 @@ interface News {
   _id: string
   title: string
   content: string;
+  image: string
   createdAt: string
   category: string
   view_count?: number
@@ -45,6 +47,7 @@ interface Forum {
   _id: string
   title: string
   content: string
+  image: string
   poster_id: {
     name: string
   }
@@ -169,7 +172,7 @@ export default function SearchPage() {
         {/* Tab Content */}
         {activeTab === "all" && (
           <div className="space-y-8">
-            {results.lawyers.length > 0 && <LawyersSection lawyers={results.lawyers.slice(0, 3)} />}
+            {results.lawyers.length > 0 && <LawyersSection lawyers={results.lawyers.slice(0, 4)} />}
             {results.news.length > 0 && <NewsSection news={results.news.slice(0, 3)} />}
             {results.forums.length > 0 && <ForumsSection forums={results.forums.slice(0, 3)} />}
           </div>
@@ -192,7 +195,7 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
         <Scale className="w-5 h-5 text-[#C9A55C]" />
         ทนายความ
       </h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {lawyers.map((lawyer) => {
           // Extract ID string correctly
           const lawyerId =
@@ -210,7 +213,7 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">{lawyer.lawfirm_name}</h3>
                   <p className="text-sm text-gray-600 mb-2">{lawyer.slogan}</p>
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {lawyer.civilCase_specialized.slice(0, 2).map((specialty, index) => (
+                    {lawyer.civilCase_specialized.map((specialty, index) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -218,7 +221,7 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
                         {specialty}
                       </span>
                     ))}
-                    {lawyer.criminalCase_specialized.slice(0, 1).map((specialty, index) => (
+                    {lawyer.criminalCase_specialized.map((specialty, index) => (
                       <span
                         key={index}
                         className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
@@ -276,38 +279,56 @@ function NewsSection({ news }: { news: News[] }) {
       </h2>
       <div className="space-y-4">
         {news.map((article) => (
-  <div
-    key={article._id}
-    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-  >
-    <div className="p-6">
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-wrap gap-1">
-          {[article.category].filter(Boolean).slice(0, 2).map((cat, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300"
-                    >
-                      {cat}
-                    </span>
-                  ))}
+          <div
+            key={article._id}
+            className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="p-4 flex gap-4">
+              {/* ภาพข่าวทางซ้าย (ถ้ามี) */}
+              {article.image && (
+                <div className="w-32 h-24 flex-shrink-0">
+                  <Image
+                    src={article.image}
+                    alt={article.title}
+                    width={128}
+                    height={96}
+                    className="w-full h-full object-cover rounded-md"
+                  />
                 </div>
-                <span className="text-sm text-gray-500">
-                  {new Date(article.createdAt).toLocaleDateString("th-TH")}
-                </span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-900">{article.title}</h3>
-              <p className="text-gray-600 mb-3">{article.content.slice(0, 100) + "..."}</p>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  {article.view_count && <span>{article.view_count.toLocaleString()} ครั้ง</span>}
-                  {article.like_count && <span>{article.like_count.toLocaleString()} ถูกใจ</span>}
+              )}
+
+              {/* ข้อมูลข่าว */}
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex flex-wrap gap-1">
+                    {[article.category].filter(Boolean).slice(0, 2).map((cat, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    {new Date(article.createdAt).toLocaleDateString("th-TH")}
+                  </span>
                 </div>
-                <Link href={`/news/${article._id}`}>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    อ่านเพิ่มเติม →
-                  </button>
-                </Link>
+                <h3 className="text-lg font-semibold mb-2 text-gray-900">{article.title}</h3>
+                <p className="text-gray-600 mb-3">
+                  {article.content.slice(0, 100)}...
+                </p>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    {article.view_count && <span>{article.view_count.toLocaleString()} ครั้ง</span>}
+                    {article.like_count && <span>{article.like_count.toLocaleString()} ถูกใจ</span>}
+                  </div>
+                  <Link href={`/news/${article._id}`}>
+                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      อ่านเพิ่มเติม →
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -330,27 +351,45 @@ function ForumsSection({ forums }: { forums: Forum[] }) {
             key={forum._id}
             className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">
-                  {forum.category}
-                </span>
-                <span className="text-sm text-gray-500">{new Date(forum.createdAt).toLocaleDateString("th-TH")}</span>
-              </div>
-              <h3 className="text-lg font-semibold mb-2 text-gray-900">{forum.title}</h3>
-              <p className="text-gray-600 mb-3 line-clamp-2">{forum.content}</p>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <span>โดย: {forum.poster_id.name}</span>
-                  <span>{forum.comment_count} ตอบกลับ</span>
-                  <span>{forum.view_count.toLocaleString()} ครั้ง</span>
-                  <span>{forum.like_count} ถูกใจ</span>
+            <div className="p-4 flex gap-4">
+              {/* รูปภาพ (ถ้ามี) */}
+              {forum.image && (
+                <div className="w-32 h-24 flex-shrink-0">
+                  <Image
+                    src={forum.image}
+                    alt={forum.title}
+                    width={128}
+                    height={96}
+                    className="w-full h-full object-cover rounded-md"
+                  />
                 </div>
-                <Link href={`/forum/${forum._id}`}>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    เข้าร่วมสนทนา →
-                  </button>
-                </Link>
+              )}
+
+              {/* เนื้อหา */}
+              <div className="flex-1">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">
+                    {forum.category}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(forum.createdAt).toLocaleDateString("th-TH")}
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-gray-900">{forum.title}</h3>
+                <p className="text-gray-600 mb-3 line-clamp-2">{forum.content}</p>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <span>โดย: {forum.poster_id.name}</span>
+                    <span>{forum.comment_count} ตอบกลับ</span>
+                    <span>ยอดวิว {forum.view_count.toLocaleString()} ครั้ง</span>
+                    <span>{forum.like_count} ถูกใจ</span>
+                  </div>
+                  <Link href={`/forum/${forum._id}`}>
+                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                      เข้าร่วมสนทนา →
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
