@@ -1,9 +1,12 @@
 "use client";
 
+import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MapPin, Phone, Star, User, X } from "lucide-react";
 import Image from "next/image";
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 
 interface Location {
   district: string;
@@ -11,6 +14,7 @@ interface Location {
 }
 
 interface LawyerUser {
+  _id: string;
   name: string;
   tel: string;
   location: Location;
@@ -39,12 +43,27 @@ interface Lawyer {
   updatedAt: string;
 }
 
+function isToday(date: Date) {
+  const today = new Date()
+  return (
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+  )
+}
+
 export default function LawyerProfilePage() {
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(true);
   const params = useParams();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false)
+  const [caseType, setCaseType] = useState("")
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedTime, setSelectedTime] = useState<Date | null>(null)
+  const [details, setDetails] = useState("")
+  const { data: session } = useSession()
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   useEffect(() => {
     const fetchLawyer = async () => {
@@ -87,6 +106,57 @@ export default function LawyerProfilePage() {
   }
 
   const { _id: user } = lawyer;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedDate || !selectedTime || !caseType) {
+      alert("กรุณาเลือกประเภทคดี วันที่ และเวลาที่ต้องการ");
+      return;
+    }
+
+    // Combine date and time
+    const reservationDateTime = new Date(selectedDate);
+    reservationDateTime.setHours(selectedTime.getHours());
+    reservationDateTime.setMinutes(selectedTime.getMinutes());
+    reservationDateTime.setSeconds(0);
+    reservationDateTime.setMilliseconds(0);
+
+    // Payload to send
+    const payload = {
+      category_type : caseType,
+      consultation_date: reservationDateTime.toISOString(),
+      description:details,
+      lawyer_id:lawyer._id._id
+    };
+
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/caseRequest`, {
+         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert("เกิดข้อผิดพลาด: " + (errorData.message || res.statusText));
+        return;
+      }
+
+      alert("จองขอคำปรึกษาสำเร็จ!");
+      setIsOpen(false);
+      // Clear form
+      setCaseType("");
+      setSelectedDate(null);
+      setSelectedTime(null);
+      setDetails("");
+    } catch (error) {
+      alert("เกิดข้อผิดพลาด: " + error);
+    }
+  };
 
   return (
     <div className="min-h-screen p-6">
@@ -289,7 +359,10 @@ export default function LawyerProfilePage() {
                 
                 {/* Modal Overlay */}
                   {isOpen && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-30">
+                    <div
+                      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+                      style={{ marginTop: 0 }}
+                    >
                       <div className="bg-white w-full max-w-md mx-4 rounded-xl shadow-lg p-6 relative">
                         <button
                           className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
@@ -298,22 +371,73 @@ export default function LawyerProfilePage() {
                           <X className="w-5 h-5" />
                         </button>
 
-                        <h2 className="text-xl font-bold mb-4 text-center">จองขอคำปรึกษา</h2>
+                        <h2 className="text-xl text-black font-bold mb-4 text-center">จองขอคำปรึกษา</h2>
 
                         {/* Reservation Form */}
-                        <form className="space-y-4">
+                        <form className="space-y-4" onSubmit={handleSubmit}>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700">ชื่อ</label>
-                            <input type="text" className="w-full border rounded-md px-3 py-2" />
+                            <label className="block text-sm font-medium text-gray-700">ประเภทคดี</label>
+                            <select
+                              className="text-gray-600 w-full border rounded-md px-3 py-2"
+                              value={caseType}
+                              onChange={(e) => setCaseType(e.target.value)}
+                              required
+                            >
+                              <option value="" disabled>
+                                เลือกประเภทคดี
+                              </option>
+                              <option value="criminal">คดีอาญา</option>
+                              <option value="civil">คดีแพ่ง</option>
+                              <option value="unknown">ไม่ทราบประเภทคดี</option>
+                            </select>
                           </div>
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700">วันที่ต้องการ</label>
-                            <input type="date" className="w-full border rounded-md px-3 py-2" />
+                            <DatePicker
+                              selected={selectedDate}
+                              onChange={(date) => setSelectedDate(date)}
+                              dateFormat="dd/MM/yyyy"
+                              className="text-gray-600 w-full border rounded-md px-3 py-2"
+                              placeholderText="เลือกวันที่"
+                              required
+                              minDate={new Date()}
+                            />
                           </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
+                            <DatePicker
+                              selected={selectedTime}
+                              onChange={(time) => setSelectedTime(time)}
+                              showTimeSelect
+                              showTimeSelectOnly
+                              timeIntervals={30}
+                              timeCaption="เวลา"
+                              dateFormat="HH:mm"
+                              className="text-gray-600 w-full border rounded-md px-3 py-2"
+                              placeholderText="เลือกเวลา"
+                              required
+                              minTime={
+                                selectedDate && isToday(selectedDate)
+                                  ? new Date()
+                                  : new Date(new Date().setHours(8, 0))
+                              }
+                              maxTime={new Date(new Date().setHours(18, 0))}
+                            />
+                          </div>
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
-                            <textarea className="w-full border rounded-md px-3 py-2" rows={3}></textarea>
+                            <textarea
+                              className="text-gray-600 w-full border rounded-md px-3 py-2"
+                              rows={3}
+                              value={details}
+                              onChange={(e) => setDetails(e.target.value)}
+                              placeholder="รายละเอียดเพิ่มเติม"
+                            />
                           </div>
+
                           <button
                             type="submit"
                             className="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800"
