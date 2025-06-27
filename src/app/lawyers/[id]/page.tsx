@@ -212,7 +212,7 @@ export default function LawyerProfilePage() {
                   {/* Specialization Tags */}
                   <div className="flex flex-wrap gap-2 mb-8 justify-center">
                     {[...lawyer.civilCase_specialized, ...lawyer.criminalCase_specialized]
-                      .slice(0, 6)
+                      .slice(0, 10)
                       .map((specialization, index) => (
                         <div
                           key={index}
