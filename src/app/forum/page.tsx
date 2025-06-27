@@ -13,6 +13,7 @@ type ForumPost = {
   poster_id: {
     _id: string
     name: string
+    photo: string
   }
   title: string
   content: string
@@ -45,6 +46,7 @@ export default function ForumPage() {
         const data = await res.json()
         if (data.success) {
           setForums(data.data)
+          console.log("fetch forum data : ",data.data);
         }
       } catch (error) {
         console.error("Error fetching forums:", error)
@@ -111,7 +113,7 @@ export default function ForumPage() {
   return (
     <div className="min-h-screen bg-slate-800">
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto p-6">
+      <main className="max-w-6xl mx-auto p-6">
         {/* Search, Category Filter, and Add Button */}
         <div className="flex gap-4 mb-8">
           <div className="relative flex-1">
@@ -240,7 +242,7 @@ export default function ForumPage() {
                     <div className="flex gap-6">
                       {/* Image */}
                       {forum.image && (
-                        <div className="relative w-36 h-34 rounded-xl overflow-hidden flex-shrink-0">
+                        <div className="relative w-48 h-34 rounded-xl overflow-hidden flex-shrink-0">
                           <Image
                             src={forum.image || "/placeholder.svg"}
                             alt={forum.title}
@@ -265,11 +267,23 @@ export default function ForumPage() {
 
                         {/* Author and Date */}
                         <div className="flex items-center gap-3 mb-4">
-                          <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs font-medium">
-                              {forum.poster_id?.name?.charAt(0) || "U"}
-                            </span>
-                          </div>
+                          {forum.poster_id?.photo ? (
+                            <div className="w-8 h-8 rounded-full overflow-hidden">
+                              <Image
+                                src={forum.poster_id.photo}
+                                alt={forum.poster_id.name || "Author"}
+                                width={32}
+                                height={32}
+                                className="object-cover w-full h-full"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center">
+                              <span className="text-white text-xs font-medium">
+                                {forum.poster_id?.name?.charAt(0) || "U"}
+                              </span>
+                            </div>
+                          )}
                           <span className="text-sm text-gray-600">{forum.poster_id?.name || "Unknown"}</span>
                         </div>
 

@@ -27,7 +27,7 @@ type ForumPost = {
 
 type Comment = {
   _id: string
-  user_id: { _id: string; name: string }
+  user_id: { _id: string; name: string; photo: string}
   content: string
   createdAt: string
 }
@@ -190,7 +190,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
   return (
     <>
       {/* Main forum post */}
-      <div className="max-w-4xl mx-auto mt-24 p-6 bg-white rounded shadow">
+      <div className="max-w-5xl mx-auto mt-24 p-6 bg-white rounded shadow">
         <div className="relative">
           <div className="absolute top-0 right-0">
             <ForumPostMenu
@@ -290,24 +290,46 @@ export default function ForumPage({ params }: { params: { id: string } }) {
               {comments.map((comment) =>
                 comment && comment.content ? (
                   <li key={comment._id} className="border-t pt-4 relative">
-                    <p className="text-gray-800 mt-3">{comment.content}</p>
-                    <span className="text-xs text-gray-500 block mt-1">
-                      By {comment.user_id?.name || "Unknown"} on{" "}
+                  {/* User Info: Image + Name + Date */}
+                  <div className="flex items-center gap-2 mb-1">
+                    {comment.user_id?.photo ? (
+                      <div className="w-8 h-8 rounded-full overflow-hidden">
+                        <Image
+                          src={comment.user_id.photo}
+                          alt={comment.user_id.name || "User"}
+                          width={32}
+                          height={32}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                        {comment.user_id?.name?.charAt(0) || "U"}
+                      </div>
+                    )}
+
+                    <span className="text-sm text-gray-500">
+                      {comment.user_id?.name || "Unknown"} on{" "}
                       {new Date(comment.createdAt).toLocaleString("th-TH", {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}
                     </span>
+                  </div>
 
-                    <div className="absolute top-2 right-2">
-                      <CommentMenu
-                        isOwner={session?.user?.id === comment.user_id._id}
-                        onEdit={() => handleEdit(comment)}
-                        onDelete={() => handleDelete(comment._id)}
-                        onReport={() => alert("Reported comment!")}
-                      />
-                    </div>
-                  </li>
+                  {/* Comment Content */}
+                  <p className="text-gray-800 mt-2">{comment.content}</p>
+
+                  {/* Comment Menu */}
+                  <div className="absolute top-2 right-2">
+                    <CommentMenu
+                      isOwner={session?.user?.id === comment.user_id._id}
+                      onEdit={() => handleEdit(comment)}
+                      onDelete={() => handleDelete(comment._id)}
+                      onReport={() => alert("Reported comment!")}
+                    />
+                  </div>
+                </li>
                 ) : null,
               )}
             </ul>
