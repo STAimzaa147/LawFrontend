@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { Search, Users, FileText, Scale } from "lucide-react"
 import Link from "next/link";
 import Image from "next/image";
+import SearchBar from "@/components/SearchBar";
 
 interface Location {
   district: string
@@ -123,7 +124,9 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    
+    <div className="container mx-auto px-8">
+      <SearchBar/>
       {/* Search Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-4">
