@@ -6,15 +6,21 @@ import { Search, Users, FileText, Scale } from "lucide-react"
 import Link from "next/link";
 import Image from "next/image";
 
+interface Location {
+  district: string
+  province: string
+}
+
+interface LawyerUser {
+  _id: string
+  name: string
+  tel: string
+  location: Location
+  photo?: string
+}
+
 interface Lawyer {
-   _id:
-    | string
-    | {
-        _id: string; // actual ID used in the route
-        name: string;
-        tel: string;
-        location: string;
-      };
+   _id: LawyerUser
   lawfirm_name: string
   slogan: string
   summary: string
@@ -198,39 +204,55 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {lawyers.map((lawyer) => {
           // Extract ID string correctly
-          const lawyerId =
-            typeof lawyer._id === "string"
-              ? lawyer._id
-              : lawyer._id?._id || "";
-
+          const lawyerId = lawyer._id._id
           return (
             <div
               key={lawyerId}
               className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="p-6">
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{lawyer.lawfirm_name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{lawyer.slogan}</p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {lawyer.civilCase_specialized.map((specialty, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {specialty}
-                      </span>
-                    ))}
-                    {lawyer.criminalCase_specialized.map((specialty, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                      >
-                        {specialty}
-                      </span>
-                    ))}
+                <div className="mb-4 flex items-center gap-4">
+                  {/* Lawyer Image */}
+                  <div className="w-28 h-28 relative shrink-0">
+                    {lawyer._id.photo ? (
+                      <Image
+                        src={lawyer._id.photo || "/placeholder.svg"}
+                        alt={lawyer._id.name}
+                        width={112}
+                        height={112}
+                        className="w-full h-full object-cover rounded-full shadow-md"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-green-400 flex items-center justify-center shadow-md">
+                        <div className="text-4xl">👨‍💼</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Name + Slogan */}
+                  <div className="flex-1 flex flex-col justify-start">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{lawyer._id.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{lawyer.slogan}</p>
                   </div>
                 </div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                      {lawyer.civilCase_specialized.map((specialty, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {specialty}
+                        </span>
+                      ))}
+                      {lawyer.criminalCase_specialized.map((specialty, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                        >
+                          {specialty}
+                        </span>
+                      ))}
+                    </div>
                 <div className="space-y-2 text-sm text-gray-600 mb-4">
                   <p>
                     ค่าปรึกษา: {lawyer.consultationRate.min.toLocaleString()}-
