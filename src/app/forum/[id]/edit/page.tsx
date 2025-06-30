@@ -145,7 +145,7 @@ export default function EditForum() {
           {imagePreview && (
             <div className="relative">
               <div className="relative w-full h-48 rounded-xl overflow-hidden">
-                <Image src={imagePreview || "/placeholder.svg"} alt="Preview" fill className="object-cover" />
+                <Image src={imagePreview || "/placeholder.svg"} alt="Preview" fill unoptimized className="object-cover" />
                 <button
                   type="button"
                   onClick={() => {

@@ -66,7 +66,7 @@ export default function LoginPage() {
           onClick={() => signIn('google', { callbackUrl: '/' })}
           className="w-full bg-gray-100 text-black py-2 rounded-full hover:bg-gray-300 flex items-center justify-center gap-2"
         >
-          <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} />
+          <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" unoptimized width={20} height={20} />
           <span>Sign in with Google</span>
         </button>
 

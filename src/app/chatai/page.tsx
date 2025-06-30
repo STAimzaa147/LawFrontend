@@ -268,7 +268,7 @@ ${legalContext}
             </svg>
           </button>
           <div className="flex flex-col items-center">
-            <Image src="/img/lawd.png" alt="AI Lawyer Avatar" width={50} height={50} className="rounded-full" />
+            <Image src="/img/lawd.png" alt="AI Lawyer Avatar" width={50} height={50} unoptimized className="rounded-full" />
             <span className="font-semibold text-lg text-gray-600">LAWDEE AI</span>
           </div>
         </header>

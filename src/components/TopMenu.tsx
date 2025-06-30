@@ -16,7 +16,7 @@ export default function TopMenu(){
             {/* Left Section */}
             <div className="flex flex-row item-center gap-4 m-2">
                 <Link href="/">
-                    <Image src={'/img/Logo.jpg'} className="object-contain" alt="logo" width={70} height={20} sizes="100vh"/>
+                    <Image src={'/img/Logo.jpg'} className="object-contain" alt="logo" width={70} height={20} sizes="100vh" unoptimized/>
                 </Link>
                 
                 <TopMenuItem title="กระทู้" pageRef="/forum"/>
@@ -45,6 +45,7 @@ export default function TopMenu(){
                             alt="avatar"
                             fill
                             className="object-cover"
+                            unoptimized
                         />
                         </div>
                         <span className="text-gray-700 font-medium">

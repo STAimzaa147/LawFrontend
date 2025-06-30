@@ -263,6 +263,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
               src={forum.image || "/placeholder.svg"}
               alt={forum.title}
               fill
+              unoptimized
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 1024px"
             />
@@ -299,6 +300,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                           alt={comment.user_id.name || "User"}
                           width={32}
                           height={32}
+                          unoptimized
                           className="object-cover w-full h-full"
                         />
                       </div>
@@ -392,6 +394,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                       src={f.image || "/placeholder.svg"}
                       alt={f.title}
                       fill
+                      unoptimized
                       className="object-cover"
                       sizes="64px"
                     />

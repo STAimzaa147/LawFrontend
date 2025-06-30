@@ -267,6 +267,7 @@ export default function UserProfile() {
                       alt="User avatar"
                       fill
                       className="object-cover transition-opacity group-hover:opacity-75"
+                      unoptimized
                       priority={true}
                       onError={(e) => {
                         console.error("Image load error:", e)

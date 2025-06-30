@@ -177,6 +177,7 @@ export default function LawyerProfilePage() {
                         alt={user.name}
                         width={112}
                         height={112}
+                        unoptimized
                         className="w-full h-full rounded-full object-cover shadow-md"
                       />
                     ) : (

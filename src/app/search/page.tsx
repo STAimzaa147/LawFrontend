@@ -223,6 +223,7 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
                         alt={lawyer._id.name}
                         width={112}
                         height={112}
+                        unoptimized
                         className="w-full h-full object-cover rounded-full shadow-md"
                       />
                     ) : (
@@ -317,6 +318,7 @@ function NewsSection({ news }: { news: News[] }) {
                     alt={article.title}
                     width={128}
                     height={96}
+                    unoptimized
                     className="w-full h-full object-cover rounded-md"
                   />
                 </div>
@@ -385,6 +387,7 @@ function ForumsSection({ forums }: { forums: Forum[] }) {
                     alt={forum.title}
                     width={128}
                     height={96}
+                    unoptimized
                     className="w-full h-full object-cover rounded-md"
                   />
                 </div>

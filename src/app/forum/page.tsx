@@ -247,6 +247,7 @@ export default function ForumPage() {
                             src={forum.image || "/placeholder.svg"}
                             alt={forum.title}
                             fill
+                            unoptimized
                             className="object-cover"
                             sizes="128px"
                           />
@@ -274,6 +275,7 @@ export default function ForumPage() {
                                 alt={forum.poster_id.name || "Author"}
                                 width={32}
                                 height={32}
+                                unoptimized
                                 className="object-cover w-full h-full"
                               />
                             </div>

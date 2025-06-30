@@ -130,6 +130,7 @@ export default async function NewsDetailPage({ params }: { params: { id: string 
                 src={newsItem.image || "/placeholder.svg"}
                 alt={newsItem.title}
                 fill
+                unoptimized
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 1024px"
               />
@@ -180,6 +181,7 @@ async function OtherNews({ currentId }: { currentId: string }) {
               alt={item.title}
               width={120}
               height={90}
+              unoptimized
               className="object-cover rounded-l-lg w-[180px] h-[120px]"
             />
             <div className="flex flex-col flex-grow px-4">

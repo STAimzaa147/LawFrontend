@@ -83,6 +83,7 @@ export default function News() {
                 alt={item.title}
                 width={500}
                 height={300}
+                unoptimized
                 className="object-cover w-full h-48"
               />
               <div className="p-4 flex flex-col flex-grow">

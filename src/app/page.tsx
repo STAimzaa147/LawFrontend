@@ -15,6 +15,7 @@ export default function Home() {
           alt="Banner"
           layout="fill"
           objectFit="cover"
+          unoptimized
           priority
           className="z-0 blur-[2px] scale-110"
         />

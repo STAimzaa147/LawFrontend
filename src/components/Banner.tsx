@@ -13,6 +13,7 @@ export default function Banner (){
             alt="cover"
             fill={true}
             priority
+            unoptimized
             objectFit="cover"/>
             <div className={styles.bannerText}>
                 <h1 className="text-4xl font-medium">Let us assist you</h1>
