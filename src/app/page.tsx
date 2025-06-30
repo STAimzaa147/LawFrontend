@@ -3,6 +3,7 @@ import HomeButton from "@/components/HomeButton";
 import SearchBar from "@/components/SearchBar";
 import News from "@/components/News";
 import Link from "next/link";
+import Article from "@/components/Article";
 
 export default function Home() {
   return (
@@ -53,6 +54,23 @@ export default function Home() {
         </div>
       </div>
       <News/>
+
+      <div className="flex items-center mt-16 justify-center">
+        <div className="w-[87%] border-t-2 border-white"></div>
+      </div>
+      <div className="flex justify-between items-center mx-28 mt-2">
+        <div className="font-bold text-white text-xl">บทความ</div>
+
+        <div>
+          <Link
+            href="/articles"
+            className="text-white hover:underline text-sm font-medium z-40"
+          >
+            ดูบทความทั้งหมด →
+          </Link>
+        </div>
+      </div>
+      <Article/>
     </main>
   );
 }

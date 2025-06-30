@@ -20,6 +20,8 @@ export default function TopMenu(){
                 </Link>
                 
                 <TopMenuItem title="กระทู้" pageRef="/forum"/>
+                <TopMenuItem title="ข่าว" pageRef="/news"/>
+                <TopMenuItem title="บทความ" pageRef="/articles"/>
                 {
                     session ? (
                         <>
