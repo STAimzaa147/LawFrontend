@@ -101,6 +101,7 @@ export default function SearchPage() {
       const [lawyers, news, forums] = await Promise.all([lawyersRes.json(), newsRes.json(), forumsRes.json()])
 
       setResults({ lawyers, news, forums })
+      console.log("lawyer's data : ",lawyers)
     } catch (error) {
       console.error("Error fetching search results:", error)
     } finally {

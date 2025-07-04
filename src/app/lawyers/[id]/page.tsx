@@ -1,46 +1,57 @@
-"use client";
+"use client"
 
+import type React from "react"
 import { useSession } from "next-auth/react"
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { MapPin, Phone, Star, User, X } from "lucide-react";
-import Image from "next/image";
+import { useState, useEffect, useCallback } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { MapPin, Phone, Star, User, X, Plus } from "lucide-react"
+import Image from "next/image"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 
 interface Location {
-  district: string;
-  province: string;
+  district: string
+  province: string
 }
 
 interface LawyerUser {
-  _id: string;
-  name: string;
-  tel: string;
-  location: Location;
-  photo?: string;
+  _id: string
+  name: string
+  tel: string
+  location: Location
+  photo?: string
 }
 
 interface Lawyer {
-  _id: LawyerUser;
-  slogan: string;
-  summary: string;
-  lawfirm_name: string;
+  _id: LawyerUser
+  slogan: string
+  summary: string
+  lawfirm_name: string
   consultationRate: {
-    min: number;
-    max: number;
-  };
+    min: number
+    max: number
+  }
   documentDeliveryRate?: {
-    min: number;
-    max: number;
-  };
-  civilCase_specialized: string[];
-  criminalCase_specialized: string[];
-  has_law_license: boolean;
-  is_verified_by_council: boolean;
-  verificationDocs: string[];
-  createdAt: string;
-  updatedAt: string;
+    min: number
+    max: number
+  }
+  civilCase_specialized: string[]
+  criminalCase_specialized: string[]
+  has_law_license: boolean
+  is_verified_by_council: boolean
+  verificationDocs: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+interface UserCase {
+  _id: string
+  title: string
+  description: string
+  category_type: string
+  consultation_status: string
+  lawyer_id?: string
+  note:string
 }
 
 function isToday(date: Date) {
@@ -53,110 +64,166 @@ function isToday(date: Date) {
 }
 
 export default function LawyerProfilePage() {
-  const [lawyer, setLawyer] = useState<Lawyer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const params = useParams();
-  const router = useRouter();
+  const [lawyer, setLawyer] = useState<Lawyer | null>(null)
+  const [userCases, setUserCases] = useState<UserCase[]>([])
+  const [loading, setLoading] = useState(true)
+  const [casesLoading, setCasesLoading] = useState(false)
+  const params = useParams()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
-  const [caseType, setCaseType] = useState("")
+  const [selectedCaseId, setSelectedCaseId] = useState("")
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<Date | null>(null)
   const [details, setDetails] = useState("")
   const { data: session } = useSession()
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
   useEffect(() => {
     const fetchLawyer = async () => {
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const id = params.id as string;
-
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+        const id = params.id as string
         const response = await fetch(`${backendUrl}/api/v1/lawyer/${id}`, {
           cache: "no-store",
-        });
+        })
 
         if (!response.ok) {
-          router.replace("/not-found");
-          return;
+          router.replace("/not-found")
+          return
         }
 
-        const result = await response.json();
+        const result = await response.json()
         if (result.success) {
-          setLawyer(result.data);
+          console.log("lawyer data: ", result)
+          setLawyer(result.data)
         } else {
-          router.replace("/not-found");
+          router.replace("/not-found")
         }
       } catch (error) {
-        console.error("Error fetching lawyer:", error);
-        router.replace("/not-found");
+        console.error("Error fetching lawyer:", error)
+        router.replace("/not-found")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchLawyer();
-  }, [params.id, router]);
+    fetchLawyer()
+  }, [params.id, router])
+
+  // Fetch user's cases without lawyer
+  const fetchUserCases = useCallback(async () => {
+    if (!session?.accessToken) return
+
+    setCasesLoading(true)
+    try {
+      const response = await fetch(`${backendUrl}/api/v1/caseRequest/client`, {
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success) {
+          const filteredCases = (result.data as UserCase[]).filter((c) => c.consultation_status === "pending")
+          setUserCases(filteredCases)
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user cases:", error)
+    } finally {
+      setCasesLoading(false)
+    }
+  }, [backendUrl, session])
+
+  useEffect(() => {
+    if (session) {
+      fetchUserCases()
+    }
+  }, [session, backendUrl, fetchUserCases])
+
+  // Handle case creation redirect
+  const handleAddCase = () => {
+    // Store current lawyer ID and return URL in localStorage or URL params
+    const returnUrl = `/lawyers/${params.id}`
+    router.push(`/case/create?returnUrl=${encodeURIComponent(returnUrl)}`)
+  }
+
+  // Check if we're returning from case creation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const caseCreated = urlParams.get("caseCreated")
+
+    if (caseCreated === "true") {
+      // Refresh the cases list
+      fetchUserCases()
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [fetchUserCases])
 
   if (loading) {
-    return <div className="text-center p-10 text-gray-500">กำลังโหลดข้อมูล...</div>;
+    return <div className="text-center p-10 text-gray-500">กำลังโหลดข้อมูล...</div>
   }
 
   if (!lawyer) {
-    return null; // fallback for failed fetch
+    return null // fallback for failed fetch
   }
 
-  const { _id: user } = lawyer;
+  const { _id: user } = lawyer
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedDate || !selectedTime || !caseType) {
-      alert("กรุณาเลือกประเภทคดี วันที่ และเวลาที่ต้องการ");
-      return;
+    e.preventDefault()
+    if (!selectedCaseId || !selectedDate || !selectedTime) {
+      alert("กรุณาเลือกคดี วันที่ และเวลาที่ต้องการ")
+      return
     }
 
     // Combine date and time
-    const reservationDateTime = new Date(selectedDate);
-    reservationDateTime.setHours(selectedTime.getHours());
-    reservationDateTime.setMinutes(selectedTime.getMinutes());
-    reservationDateTime.setSeconds(0);
-    reservationDateTime.setMilliseconds(0);
+    const reservationDateTime = new Date(selectedDate)
+    reservationDateTime.setHours(selectedTime.getHours())
+    reservationDateTime.setMinutes(selectedTime.getMinutes())
+    reservationDateTime.setSeconds(0)
+    reservationDateTime.setMilliseconds(0)
 
     // Payload to send
     const payload = {
-      category_type : caseType,
-      consultation_date: reservationDateTime.toISOString(),
-      description:details,
-      lawyer_id:lawyer._id._id
-    };
+      case_id: selectedCaseId,
+      note: details,
+      offered_Lawyers: lawyer._id,
+    }
 
     try {
-      const res = await fetch(`${backendUrl}/api/v1/caseRequest`, {
-         method: "POST",
+      const res = await fetch(`${backendUrl}/api/v1/caseRequest/${selectedCaseId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify(payload),
-      });
+      })
 
       if (!res.ok) {
-        const errorData = await res.json();
-        alert("เกิดข้อผิดพลาด: " + (errorData.message || res.statusText));
-        return;
+        const errorData = await res.json()
+        alert("เกิดข้อผิดพลาด: " + (errorData.message || res.statusText))
+        return
       }
 
-      alert("จองขอคำปรึกษาสำเร็จ!");
-      setIsOpen(false);
+      alert("จองขอคำปรึกษาสำเร็จ!")
+      setIsOpen(false)
       // Clear form
-      setCaseType("");
-      setSelectedDate(null);
-      setSelectedTime(null);
-      setDetails("");
+      setSelectedCaseId("")
+      setSelectedDate(null)
+      setSelectedTime(null)
+      setDetails("")
+      // Refresh cases list
+      fetchUserCases()
+      router.push(`/case/${selectedCaseId}`);
     } catch (error) {
-      alert("เกิดข้อผิดพลาด: " + error);
+      alert("เกิดข้อผิดพลาด: " + error)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -206,9 +273,7 @@ export default function LawyerProfilePage() {
                   </div>
 
                   {/* Quote */}
-                  <p className="text-lg text-gray-600 italic mb-4 before:content-['“'] after:content-['”']">
-                    {lawyer.slogan}
-                  </p>
+                  <p className="text-lg text-gray-600 italic mb-4">{lawyer.slogan}</p>
 
                   {/* Specialization Tags */}
                   <div className="flex flex-wrap gap-2 mb-8 justify-center">
@@ -221,7 +286,7 @@ export default function LawyerProfilePage() {
                         >
                           {specialization}
                         </div>
-                    ))}
+                      ))}
                   </div>
 
                   {/* Contact Button */}
@@ -236,7 +301,6 @@ export default function LawyerProfilePage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-6">เกี่ยวกับ {user.name}</h2>
                 <div className="space-y-4">
                   <p className="text-gray-700 text-sm leading-relaxed">{lawyer.summary}</p>
-
                   <div className="pt-4 border-t border-gray-200">
                     <h3 className="font-semibold text-gray-900 mb-3">ประสบการณ์การทำงาน</h3>
                     <div className="space-y-2">
@@ -247,7 +311,8 @@ export default function LawyerProfilePage() {
                       <div className="flex items-start gap-3">
                         <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
                         <span className="text-gray-700 text-sm">
-                          ความเชี่ยวชาญด้านกฎหมายทั้งหมด {lawyer.civilCase_specialized.length + lawyer.criminalCase_specialized.length}{" "}
+                          ความเชี่ยวชาญด้านกฎหมายทั้งหมด{" "}
+                          {lawyer.civilCase_specialized.length + lawyer.criminalCase_specialized.length}{" "}
                         </span>
                       </div>
                       <div className="flex items-start gap-3">
@@ -267,7 +332,6 @@ export default function LawyerProfilePage() {
               {/* License Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">ใบอนุญาต</h2>
-
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 border-2 border-purple-400 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
                     <User className="w-8 h-8 text-gray-600" />
@@ -308,7 +372,6 @@ export default function LawyerProfilePage() {
               {/* บทความ Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h3 className="font-bold text-gray-900 text-xl mb-6">บทความ</h3>
-                
               </div>
 
               {/* forum Rates Card */}
@@ -344,112 +407,135 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
               </div>
-              <>
+
               {/* Contact Button */}
-                <div className="fixed bottom-12 right-12 z-20">
-                  <button
-                    onClick={() => setIsOpen(true)}
-                    className="bg-gray-50 text-slate-700 px-6 py-3 rounded-full font-medium hover:bg-gray-200 transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
-                  >
-                    <span>จองขอคำปรึกษา</span>
-                    <div className="w-6 h-6 bg-slate-700 bg-opacity-10 rounded-full flex items-center justify-center">
-                      <Phone className="w-3 h-3" />
-                    </div>
-                  </button>
-                </div>
-                
-                {/* Modal Overlay */}
-                  {isOpen && (
-                    <div
-                      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-                      style={{ marginTop: 0 }}
+              <div className="fixed bottom-12 right-12 z-20">
+                <button
+                  onClick={() => setIsOpen(true)}
+                  className="bg-gray-50 text-slate-700 px-6 py-3 rounded-full font-medium hover:bg-gray-200 transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+                >
+                  <span>จองขอคำปรึกษา</span>
+                  <div className="w-6 h-6 bg-slate-700 bg-opacity-10 rounded-full flex items-center justify-center">
+                    <Phone className="w-3 h-3" />
+                  </div>
+                </button>
+              </div>
+
+              {/* Modal Overlay */}
+              {isOpen && (
+                <div
+                  className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+                  style={{ marginTop: 0 }}
+                >
+                  <div className="bg-white w-full max-w-md mx-4 rounded-xl shadow-lg p-6 relative">
+                    <button
+                      className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                      onClick={() => setIsOpen(false)}
                     >
-                      <div className="bg-white w-full max-w-md mx-4 rounded-xl shadow-lg p-6 relative">
-                        <button
-                          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
+                      <X className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-xl text-black font-bold mb-4 text-center">จองขอคำปรึกษา</h2>
 
-                        <h2 className="text-xl text-black font-bold mb-4 text-center">จองขอคำปรึกษา</h2>
-
-                        {/* Reservation Form */}
-                        <form className="space-y-4" onSubmit={handleSubmit}>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">ประเภทคดี</label>
+                    {/* Reservation Form */}
+                    <form className="space-y-4" onSubmit={handleSubmit}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">เลือกคดีของคุณ</label>
+                        {casesLoading ? (
+                          <div className="text-gray-500 text-sm">กำลังโหลดคดี...</div>
+                        ) : (
+                          <>
                             <select
-                              className="text-gray-600 w-full border rounded-md px-3 py-2"
-                              value={caseType}
-                              onChange={(e) => setCaseType(e.target.value)}
+                              className="text-gray-600 w-full border rounded-md px-3 py-2 mb-2"
+                              value={selectedCaseId}
+                              onChange={(e) => setSelectedCaseId(e.target.value)}
                               required
                             >
                               <option value="" disabled>
-                                เลือกประเภทคดี
+                                เลือกคดีที่ต้องการปรึกษา
                               </option>
-                              <option value="criminal">คดีอาญา</option>
-                              <option value="civil">คดีแพ่ง</option>
-                              <option value="unknown">ไม่ทราบประเภทคดี</option>
+                              {userCases.length === 0 ? (
+                                <option value="" disabled>
+                                  ไม่มีคดีที่ยังไม่มีทนาย
+                                </option>
+                              ) : (
+                                userCases.map((userCase) => (
+                                  <option key={userCase._id} value={userCase._id}>
+                                    {userCase.title} (
+                                    {userCase.description.slice(0,50) }
+                                    )
+                                  </option>
+                                ))
+                              )}
                             </select>
-                          </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">วันที่ต้องการ</label>
-                            <DatePicker
-                              selected={selectedDate}
-                              onChange={(date) => setSelectedDate(date)}
-                              dateFormat="dd/MM/yyyy"
-                              className="text-gray-600 w-full border rounded-md px-3 py-2"
-                              placeholderText="เลือกวันที่"
-                              required
-                              minDate={new Date()}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
-                            <DatePicker
-                              selected={selectedTime}
-                              onChange={(time) => setSelectedTime(time)}
-                              showTimeSelect
-                              showTimeSelectOnly
-                              timeIntervals={30}
-                              timeCaption="เวลา"
-                              dateFormat="HH:mm"
-                              className="text-gray-600 w-full border rounded-md px-3 py-2"
-                              placeholderText="เลือกเวลา"
-                              required
-                              minTime={
-                                selectedDate && isToday(selectedDate)
-                                  ? new Date()
-                                  : new Date(new Date().setHours(8, 0))
-                              }
-                              maxTime={new Date(new Date().setHours(18, 0))}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
-                            <textarea
-                              className="text-gray-600 w-full border rounded-md px-3 py-2"
-                              rows={3}
-                              value={details}
-                              onChange={(e) => setDetails(e.target.value)}
-                              placeholder="รายละเอียดเพิ่มเติม"
-                            />
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800"
-                          >
-                            ยืนยันการจอง
-                          </button>
-                        </form>
+                            {/* Add Case Button */}
+                            <button
+                              type="button"
+                              onClick={handleAddCase}
+                              className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 py-2 px-4 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium"
+                            >
+                              <Plus className="w-4 h-4" />
+                              สร้างคดีใหม่
+                            </button>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  )}
-              </>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">วันที่ต้องการ</label>
+                        <DatePicker
+                          selected={selectedDate}
+                          onChange={(date) => setSelectedDate(date)}
+                          dateFormat="dd/MM/yyyy"
+                          className="text-gray-600 w-full border rounded-md px-3 py-2"
+                          placeholderText="เลือกวันที่"
+                          required
+                          minDate={new Date()}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
+                        <DatePicker
+                          selected={selectedTime}
+                          onChange={(time) => setSelectedTime(time)}
+                          showTimeSelect
+                          showTimeSelectOnly
+                          timeIntervals={30}
+                          timeCaption="เวลา"
+                          dateFormat="HH:mm"
+                          className="text-gray-600 w-full border rounded-md px-3 py-2"
+                          placeholderText="เลือกเวลา"
+                          required
+                          minTime={
+                            selectedDate && isToday(selectedDate) ? new Date() : new Date(new Date().setHours(8, 0))
+                          }
+                          maxTime={new Date(new Date().setHours(18, 0))}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
+                        <textarea
+                          className="text-gray-600 w-full border rounded-md px-3 py-2"
+                          rows={3}
+                          value={details}
+                          onChange={(e) => setDetails(e.target.value)}
+                          placeholder="รายละเอียดเพิ่มเติม"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={userCases.length === 0 || !selectedCaseId}
+                      >
+                        ยืนยันการจอง
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

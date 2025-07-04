@@ -125,7 +125,7 @@ function ArticleCard({ item }: { item: ArticleItem }) {
           href={`/articles/${item._id}`}
           className="inline-block w-full text-center bg-[#C9A55C] text-white py-2 px-4 rounded-lg hover:bg-[#C9A55C] transition-colors"
         >
-          Read More
+          อ่านเพิ่มเติม
         </Link>
       </div>
     </div>

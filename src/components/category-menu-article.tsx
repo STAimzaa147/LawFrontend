@@ -114,70 +114,71 @@ export default function CategoryMenuArticle({ currentCategory }: CategoryMenuPro
   }
 
   return (
-    <div className="mb-6">
-      {/* Mobile Toggle Button */}
-      <div className="md:hidden mb-4">
+  <div className="mb-6">
+    {/* ปุ่มเปิด/ปิดเมนู (มือถือ) */}
+    <div className="md:hidden mb-4">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 bg-white text-black border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+      >
+        <Filter className="w-4 h-4" />
+        หมวดหมู่
+        {currentCategory && (
+          <span className="ml-2 bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+            {currentCategory}
+          </span>
+        )}
+      </button>
+    </div>
+
+    {/* เมนูหมวดหมู่ */}
+    <div className={`${isOpen ? "block" : "hidden"} md:block`}>
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-white font-medium mr-2 hidden md:inline">กรองตามหมวดหมู่:</span>
+
+        {/* ปุ่มสำหรับแสดงบทความทั้งหมด */}
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 bg-white text-black border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+          onClick={() => handleCategorySelect("all")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            !currentCategory
+              ? "bg-[#C9A55C] text-white hover:bg-[#C9A55C]"
+              : "bg-white text-black border border-gray-300 hover:bg-gray-100"
+          }`}
         >
-          <Filter className="w-4 h-4" />
-          Categories
-          {currentCategory && (
-            <span className="ml-2 bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-              {currentCategory}
-            </span>
-          )}
+          บทความทั้งหมด
         </button>
-      </div>
 
-      {/* Category Menu */}
-      <div className={`${isOpen ? "block" : "hidden"} md:block`}>
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-white font-medium mr-2 hidden md:inline">Filter by:</span>
-
-          {/* All Categories Button */}
+        {/* ปุ่มหมวดหมู่ต่าง ๆ */}
+        {categories.map((category) => (
           <button
-            onClick={() => handleCategorySelect("all")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              !currentCategory
+            key={category._id}
+            onClick={() => handleCategorySelect(category.name)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              currentCategory === category.name
                 ? "bg-[#C9A55C] text-white hover:bg-[#C9A55C]"
                 : "bg-white text-black border border-gray-300 hover:bg-gray-100"
             }`}
           >
-            All Articles
+            {category.name}
+            <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+              {category.count}
+            </span>
           </button>
+        ))}
 
-          {/* Category Buttons */}
-          {categories.map((category) => (
-            <button
-              key={category._id}
-              onClick={() => handleCategorySelect(category.name)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                currentCategory === category.name
-                  ? "bg-[#C9A55C] text-white hover:bg-[#C9A55C]"
-                  : "bg-white text-black border border-gray-300 hover:bg-gray-100"
-              }`}
-            >
-              {category.name}
-              <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-                {category.count}
-              </span>
-            </button>
-          ))}
-
-          {/* Clear Filter Button */}
-          {currentCategory && (
-            <button
-              onClick={clearCategory}
-              className="px-3 py-2 rounded-lg text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-1"
-            >
-              <X className="w-4 h-4" />
-              Clear
-            </button>
-          )}
-        </div>
+        {/* ปุ่มล้างการกรอง */}
+        {currentCategory && (
+          <button
+            onClick={clearCategory}
+            className="px-3 py-2 rounded-lg text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-1"
+          >
+            <X className="w-4 h-4" />
+            ล้างการกรอง
+          </button>
+        )}
       </div>
     </div>
-  )
+  </div>
+)
+
 }

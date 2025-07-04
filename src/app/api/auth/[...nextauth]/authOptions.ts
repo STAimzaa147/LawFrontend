@@ -1,8 +1,6 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import FacebookProvider from "next-auth/providers/facebook";
-import type { JWT } from "next-auth/jwt";
-import type { Session, User } from "next-auth";
 import type { NextAuthOptions } from "next-auth";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -74,28 +72,61 @@ export const authOptions : NextAuthOptions = {
   },
   session: { strategy: "jwt" },
   callbacks: {
-  async jwt({ token, user }: { token: JWT; user?: User }) {
-    if (user) {
-      // On initial sign in, copy user info and token into JWT
-      token.accessToken = user.token; // your backend token
+  async jwt({ token, user, account }) {
+    // 1. Credentials-based login
+    if (user && account?.provider === "credentials") {
+      token.accessToken = user.token;
       token.id = user.id;
       token.name = user.name;
       token.email = user.email;
       token.role = user.role;
       token.picture = user.image;
     }
+
+    // 2. OAuth login (Google, Facebook)
+    if (account && (account.provider === "google" || account.provider === "facebook")) {
+      try {
+        const res = await fetch(`${backendUrl}/api/v1/auth/oauthLogin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: token.email,
+            name: token.name,
+            provider: account.provider,
+            image: token.picture,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          token.accessToken = data.token;
+          token.id = data._id;
+          token.name = data.name;
+          token.email = data.email;
+          token.role = data.role;
+          token.picture = data.photo || "/img/default-avatar.jpg";
+        } else {
+          console.error("Backend social login failed:", data.message);
+        }
+      } catch (error) {
+        console.error("Social login error:", error);
+      }
+    }
+
     return token;
   },
-  async session({ session, token }: { session: Session; token: JWT }) {
-    // Expose token fields in session.user
-    session.user.id = token.id?? "";
-    session.user.name = token.name?? "";
-    session.user.email = token.email?? "";
+
+  async session({ session, token }) {
+    session.user.id = token.id ?? "";
+    session.user.name = token.name ?? "";
+    session.user.email = token.email ?? "";
     session.user.role = token.role;
     session.user.image = token.picture;
-    session.accessToken = token.accessToken; // make token available on client session
+    session.accessToken = token.accessToken;
     return session;
   },
 },
-
 };
