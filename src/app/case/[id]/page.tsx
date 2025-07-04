@@ -353,6 +353,58 @@ export default function CaseDetailsPage() {
 
   const isOwner = session?.user?.id === caseData?.client_id._id
 
+  const handleAccept = async () => {
+  try {
+    const response = await fetch(`${backendUrl}/api/v1/hiring/create/${caseId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.accessToken}`, // if using auth
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      alert("คุณได้ยอมรับคำขอเรียบร้อยแล้ว");
+      router.refresh();
+      // You can also refetch or update UI here
+    } else {
+      console.error(data.message || "เกิดข้อผิดพลาด");
+      alert("การยอมรับคำขอล้มเหลว");
+    }
+  } catch (error) {
+    console.error("Error accepting request:", error);
+    alert("เกิดข้อผิดพลาดขณะยอมรับคำขอ");
+  }
+};
+
+// const handleReject = async () => {
+//   try {
+//     const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseRequestId}/reject`, {
+//       method: "PATCH",
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: `Bearer ${session?.accessToken}`, // if using auth
+//       },
+//     });
+
+//     const data = await response.json();
+
+//     if (response.ok && data.success) {
+//       alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว");
+//       // You can also refetch or update UI here
+//     } else {
+//       console.error(data.message || "เกิดข้อผิดพลาด");
+//       alert("การปฏิเสธคำขอล้มเหลว");
+//     }
+//   } catch (error) {
+//     console.error("Error rejecting request:", error);
+//     alert("เกิดข้อผิดพลาดขณะปฏิเสธคำขอ");
+//   }
+// };
+
+
   if (!session) {
     return (
       <div className="min-h-screen bg-slate-800 flex items-center justify-center">
@@ -451,6 +503,32 @@ export default function CaseDetailsPage() {
                   <Trash2 className="w-4 h-4" />
                   {deleteLoading ? "กำลังลบ..." : "ลบ"}
                 </button>
+              </div>
+            )}
+            {session.user.role === "lawyer" && caseData.consultation_status === "pending" && (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAccept}
+                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  ✅
+                  ยอมรับ
+                </button>
+                {/* <button
+                  onClick={handleReject}
+                  className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition disabled:opacity-50"
+                >
+                  ❌
+                  ปฏิเสธ
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteLoading}
+                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleteLoading ? "กำลังลบ..." : "ลบ"}
+                </button> */}
               </div>
             )}
           </div>
