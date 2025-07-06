@@ -1,14 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
 import { FaArrowRight } from 'react-icons/fa'
 
 export default function RegisterStep1() {
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
-  const router = useRouter()
+  // const router = useRouter()
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -70,7 +70,7 @@ export default function RegisterStep1() {
         throw new Error(data.message || 'OTP verification failed');
       }
 
-      router.push(`/register/details?phone=${phone}`);
+      // router.push(`/register/details?phone=${phone}`);
     } catch (error) {
       console.error('Error verifying OTP:', error);
       alert(error);
