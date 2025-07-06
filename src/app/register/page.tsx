@@ -1,14 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-// import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { FaArrowRight } from 'react-icons/fa'
 
 export default function RegisterStep1() {
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
-  // const router = useRouter()
+  const router = useRouter()
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -54,28 +54,28 @@ export default function RegisterStep1() {
     }
 
     // Format to xxx-xxx-xxxx
-    const formattedPhone = digitsOnly.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
-    try {
-      console.log('Verifying OTP:', otp);
+    // const formattedPhone = digitsOnly.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    // try {
+    //   console.log('Verifying OTP:', otp);
 
-      const res = await fetch(`${backendUrl}/api/v1/otpService/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otp, tel : formattedPhone }), // sending phone and otp
-      });
+    //   const res = await fetch(`${backendUrl}/api/v1/otpService/verify`, {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({ otp, tel : formattedPhone }), // sending phone and otp
+    //   });
 
-      const data = await res.json();
+    //   const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || 'OTP verification failed');
-      }
+    //   if (!res.ok) {
+    //     throw new Error(data.message || 'OTP verification failed');
+    //   }
 
-      // router.push(`/register/details?phone=${phone}`);
-    } catch (error) {
-      console.error('Error verifying OTP:', error);
-      alert(error);
-      // Optional: set error state to show message to user
-    }
+      router.push(`/register/details?phone=${phone}`);
+    // } catch (error) {
+    //   console.error('Error verifying OTP:', error);
+    //   alert(error);
+    //   // Optional: set error state to show message to user
+    // }
   }
 
   return (
