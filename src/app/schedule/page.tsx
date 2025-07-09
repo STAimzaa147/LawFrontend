@@ -258,7 +258,7 @@ export default function SchedulePage() {
         <div className="space-y-6">
           {/* Selected Day Events */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h2 className="text-sm font-semibold mb-4">
+            <h2 className="text-sm text-black font-semibold mb-4">
               {new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDate).toLocaleDateString("th-TH", {
                 weekday: "long",
                 year: "numeric",
@@ -285,7 +285,7 @@ export default function SchedulePage() {
                         minute: "2-digit",
                       })}
                     </div>
-                    <div className="text-sm font-medium">{appointment.task}</div>
+                    <div className="text-sm text-black font-medium">{appointment.task}</div>
                     <div className="text-xs text-gray-600 mt-1">สถานที่: {appointment.location}</div>
                     {appointment.note && <div className="text-xs text-gray-600 mt-1">หมายเหตุ: {appointment.note}</div>}
                     <div

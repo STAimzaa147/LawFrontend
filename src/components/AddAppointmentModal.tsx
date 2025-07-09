@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useCallback, useEffect, useState } from "react"
 import DatePicker from "react-datepicker"
-import { isToday } from "date-fns"
 import { useSession } from "next-auth/react"
 import Select from "react-select"
 
@@ -42,13 +41,66 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
     permission: "",
     note: "",
   })
-  const getTimeFromDate = (dateStr: string, hours: number, minutes: number = 0) => {
-    const d = new Date(dateStr)
-    d.setHours(hours, minutes, 0, 0)
-    return d
-    }
   const [startTime, setStartTime] = useState<Date | null>(null)
-    const [endTime, setEndTime] = useState<Date | null>(null)
+  const [endTime, setEndTime] = useState<Date | null>(null)
+  const [baseDate] = useState(new Date())
+
+  // Helper function to check if a date is today
+  const isToday = (date: Date) => {
+    const today = new Date()
+    return date.toDateString() === today.toDateString()
+  }
+
+  // Set time boundaries
+  const minSelectableTime = new Date()
+  minSelectableTime.setHours(8, 0, 0, 0) // 8:00 AM
+
+  const maxSelectableTime = new Date()
+  maxSelectableTime.setHours(22, 0, 0, 0) // 10:00 PM
+
+  // Get current time for today's minimum time
+  const getCurrentMinTime = () => {
+    if (isToday(baseDate)) {
+      const now = new Date()
+      const currentHour = now.getHours()
+      const currentMinute = now.getMinutes()
+
+      // Round up to next 30-minute interval
+      const roundedMinute = currentMinute <= 30 ? 30 : 0
+      const roundedHour = currentMinute > 30 ? currentHour + 1 : currentHour
+
+      const minTime = new Date()
+      minTime.setHours(roundedHour, roundedMinute, 0, 0)
+
+      return minTime > minSelectableTime ? minTime : minSelectableTime
+    }
+    return minSelectableTime
+  }
+
+  // Get minimum time for end time based on start time
+  const getEndTimeMin = () => {
+    if (startTime) {
+      const minEndTime = new Date(startTime)
+      minEndTime.setMinutes(minEndTime.getMinutes() + 30) // At least 30 minutes after start
+      return minEndTime
+    }
+    return getCurrentMinTime()
+  }
+
+  // Reset end time if it's before the new start time
+  useEffect(() => {
+    if (startTime && endTime && endTime <= startTime) {
+      setEndTime(null)
+    }
+  }, [startTime, endTime])
+
+  const handleStartTimeChange = (time: Date | null) => {
+    setStartTime(time)
+  }
+
+  const handleEndTimeChange = (time: Date | null) => {
+    setEndTime(time)
+  }
   const [loading, setLoading] = useState(false)
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
@@ -237,48 +289,54 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
             </div>
 
             {/* Time Fields */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">เวลาเริ่ม</label>
-                    <DatePicker
-                        selected={startTime}
-                        onChange={(time) => setStartTime(time)}
-                        showTimeSelect
-                        showTimeSelectOnly
-                        timeIntervals={30}
-                        timeCaption="เวลา"
-                        dateFormat="HH:mm"
-                        className="text-gray-600 w-full border rounded-md px-3 py-2"
-                        placeholderText="เลือกเวลา"
-                        required
-                        minTime={(() => {
-                            const date = new Date(formData.date)
-                            return isToday(date)
-                            ? new Date()
-                            : getTimeFromDate(formData.date, 8, 0)
-                        })()}
-                        maxTime={getTimeFromDate(formData.date, 18, 0)}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">เวลาจบ</label>
-                    <DatePicker
-                        selected={endTime}
-                        onChange={(time) => setEndTime(time)}
-                        showTimeSelect
-                        showTimeSelectOnly
-                        timeIntervals={30}
-                        timeCaption="เวลา"
-                        dateFormat="HH:mm"
-                        className="text-gray-600 w-full border rounded-md px-3 py-2"
-                        placeholderText="เลือกเวลา"
-                        required
-                        minTime={startTime || getTimeFromDate(formData.date, 8, 0)}
-                        maxTime={getTimeFromDate(formData.date, 18, 0)}
-                    />
-                </div>
-            </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">เวลาเริ่ม</label>
+                      <div className="relative">
+                        <div className="w-full border-2 border-blue-400 rounded-lg px-3 py-2 focus-within:border-blue-600 transition-colors">
+                          <DatePicker
+                            selected={startTime}
+                            onChange={handleStartTimeChange}
+                            showTimeSelect
+                            showTimeSelectOnly
+                            timeIntervals={30}
+                            timeCaption="เวลา"
+                            dateFormat="HH:mm"
+                            placeholderText="เลือกเวลาเริ่ม"
+                            className="w-full outline-none bg-transparent text-gray-700 placeholder-gray-400"
+                            required
+                            minTime={getCurrentMinTime()}
+                            maxTime={maxSelectableTime}
+                            timeFormat="HH:mm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+            
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">เวลาจบ</label>
+                      <div className="relative">
+                        <div className="w-full border-2 border-blue-400 rounded-lg px-3 py-2 focus-within:border-blue-600 transition-colors">
+                          <DatePicker
+                            selected={endTime}
+                            onChange={handleEndTimeChange}
+                            showTimeSelect
+                            showTimeSelectOnly
+                            timeIntervals={30}
+                            timeCaption="เวลา"
+                            dateFormat="HH:mm"
+                            placeholderText="เลือกเวลาจบ"
+                            className="w-full outline-none bg-transparent text-gray-700 placeholder-gray-400"
+                            required
+                            minTime={getEndTimeMin()}
+                            maxTime={maxSelectableTime}
+                            timeFormat="HH:mm"
+                            disabled={!startTime}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
             {/* Permission selection for lawyers */}
                 {session?.user?.role === "lawyer" ? (
