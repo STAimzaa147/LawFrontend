@@ -17,7 +17,7 @@ export default function ConfirmSignOutPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="bg-white p-6 rounded-4xl shadow-md w-full max-w-lg text-center">
+      <div className="bg-white p-6 rounded-3xl shadow-md w-full max-w-lg text-center">
         <h2 className="text-xl font-semibold text-black mb-8">
           คุณแน่ใจว่าต้องการออกจากระบบ
         </h2>
