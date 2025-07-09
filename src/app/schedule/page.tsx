@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import AddAppointmentModal from "@/components/AddAppointmentModal"
@@ -49,62 +48,85 @@ export default function SchedulePage() {
   const [selectedDayEvents, setSelectedDayEvents] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const { data: session } = useSession()
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
   const [showModal, setShowModal] = useState(false)
 
   const fetchAppointments = useCallback(async () => {
     try {
-        setLoading(true);
-        const token = session?.accessToken;
-
-        const response = await fetch(`${backendUrl}/api/v1/appointment/`, {
+      setLoading(true)
+      const token = session?.accessToken
+      const response = await fetch(`${backendUrl}/api/v1/appointment/`, {
         method: "GET",
         headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        });
-
-        if (!response.ok) {
-        throw new Error("Failed to fetch appointments");
-        }
-
-        const result: ApiResponse = await response.json();
-
-        const eventsByDate: { [key: number]: Appointment[] } = {};
-        result.data.forEach((appointment) => {
-        const appointmentDate = new Date(appointment.timeStamp);
-        const currentMonth = currentDate.getMonth();
-        const currentYear = currentDate.getFullYear();
-
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch appointments")
+      }
+      const result: ApiResponse = await response.json()
+      const eventsByDate: { [key: number]: Appointment[] } = {}
+      result.data.forEach((appointment) => {
+        const appointmentDate = new Date(appointment.timeStamp)
+        const currentMonth = currentDate.getMonth()
+        const currentYear = currentDate.getFullYear()
         if (appointmentDate.getMonth() === currentMonth && appointmentDate.getFullYear() === currentYear) {
-            const day = appointmentDate.getDate();
-            if (!eventsByDate[day]) {
-            eventsByDate[day] = [];
-            }
-            eventsByDate[day].push(appointment);
+          const day = appointmentDate.getDate()
+          if (!eventsByDate[day]) {
+            eventsByDate[day] = []
+          }
+          eventsByDate[day].push(appointment)
         }
-        });
-
-        setEvents(eventsByDate);
-
-        if (eventsByDate[selectedDate]) {
-        setSelectedDayEvents(eventsByDate[selectedDate]);
-        }
+      })
+      setEvents(eventsByDate)
+      if (eventsByDate[selectedDate]) {
+        setSelectedDayEvents(eventsByDate[selectedDate])
+      }
     } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
-        setLoading(false);
+      setLoading(false)
     }
-    }, [backendUrl, currentDate, selectedDate, session?.accessToken]);
+  }, [backendUrl, currentDate, selectedDate, session?.accessToken])
 
-    useEffect(() => {
-    const userId = session?.user.id;
-    if (userId != null) {
-        fetchAppointments();
+  const deleteAppointment = async (appointmentId: string) => {
+    if (!confirm("คุณแน่ใจหรือไม่ที่จะลบนัดหมายนี้?")) {
+      return
     }
-    }, [fetchAppointments, session?.user.id]);
+
+    try {
+      setDeletingId(appointmentId)
+      const token = session?.accessToken
+      const response = await fetch(`${backendUrl}/api/v1/appointment/${appointmentId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete appointment")
+      }
+
+      // Refresh appointments after successful deletion
+      await fetchAppointments()
+    } catch (err) {
+      alert("เกิดข้อผิดพลาดในการลบนัดหมาย: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  useEffect(() => {
+    const userId = session?.user.id
+    if (userId != null) {
+      fetchAppointments()
+    }
+  }, [fetchAppointments, session?.user.id])
 
   // Update selected day events when date changes
   useEffect(() => {
@@ -136,7 +158,6 @@ export default function SchedulePage() {
   // Current month days
   for (let day = 1; day <= daysInMonth; day++) {
     const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear()
-
     calendarDays.push({
       day,
       isCurrentMonth: true,
@@ -267,7 +288,6 @@ export default function SchedulePage() {
                 calendar: "buddhist",
               })}
             </h2>
-
             {loading ? (
               <div className="text-center py-4 text-gray-500">กำลังโหลด...</div>
             ) : error ? (
@@ -275,7 +295,7 @@ export default function SchedulePage() {
             ) : (
               <div className="space-y-2">
                 {selectedDayEvents.map((appointment, index) => (
-                  <div key={appointment._id || index} className="bg-gray-100 p-3 rounded-lg">
+                  <div key={appointment._id || index} className="bg-gray-100 p-3 rounded-lg relative">
                     <div className="text-xs text-gray-600 mb-1">
                       {new Date(appointment.timeStamp).toLocaleString("th-TH", {
                         year: "numeric",
@@ -285,27 +305,55 @@ export default function SchedulePage() {
                         minute: "2-digit",
                       })}
                     </div>
-                    <div className="text-sm text-black font-medium">{appointment.task}</div>
+                    <div className="text-sm text-black font-medium pr-8">{appointment.task}</div>
                     <div className="text-xs text-gray-600 mt-1">สถานที่: {appointment.location}</div>
                     {appointment.note && <div className="text-xs text-gray-600 mt-1">หมายเหตุ: {appointment.note}</div>}
-                    <div
-                      className={`text-xs mt-2 px-2 py-1 rounded inline-block ${
-                        appointment.status === "confirmed"
-                          ? "bg-green-100 text-green-800"
+                    <div className="flex items-center justify-between mt-2">
+                      <div
+                        className={`text-xs px-2 py-1 rounded inline-block ${
+                          appointment.status === "confirmed"
+                            ? "bg-green-100 text-green-800"
+                            : appointment.status === "cancelled"
+                              ? "bg-red-100 text-red-800"
+                              : appointment.status === "completed"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {appointment.status === "confirmed"
+                          ? "ยืนยันแล้ว"
                           : appointment.status === "cancelled"
-                            ? "bg-red-100 text-red-800"
+                            ? "ยกเลิก"
                             : appointment.status === "completed"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {appointment.status === "confirmed"
-                        ? "ยืนยันแล้ว"
-                        : appointment.status === "cancelled"
-                          ? "ยกเลิก"
-                          : appointment.status === "completed"
-                            ? "เสร็จสิ้น"
-                            : appointment.status}
+                              ? "เสร็จสิ้น"
+                              : appointment.status}
+                      </div>
+                      <button
+                        onClick={() => deleteAppointment(appointment._id)}
+                        disabled={deletingId === appointment._id}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="ลบนัดหมาย"
+                      >
+                        {deletingId === appointment._id ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        )}
+                      </button>
                     </div>
                   </div>
                 ))}

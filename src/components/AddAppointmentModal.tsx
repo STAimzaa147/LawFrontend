@@ -38,7 +38,7 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
     startTime: "",
     endTime: "",
     date: new Date().toISOString().split("T")[0],
-    permission: "",
+    permission: "client",
     note: "",
   })
   const [startTime, setStartTime] = useState<Date | null>(null)
@@ -189,7 +189,7 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
         permission: formData.permission,
         status: "confirmed",
         }
-
+        console.log(appointmentData);
         const response = await fetch(`${backendUrl}/api/v1/appointment/create/${selectedCaseId}`, {
         method: "POST",
         headers: {
@@ -268,7 +268,7 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
                 name="location"
                 value={formData.location}
                 onChange={handleInputChange}
-                className="w-full border-2 border-blue-400 rounded-lg p-3 outline-none focus:border-blue-600"
+                className="w-full border-2 border-blue-400 rounded-lg p-3 outline-none text-black focus:border-blue-600"
                 placeholder="ระบุสถานที่"
                 required
               />
