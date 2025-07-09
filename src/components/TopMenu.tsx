@@ -71,6 +71,18 @@ export default function TopMenu(){
                             <MenuItem>
                             {({ active }) => (
                                 <Link
+                                href="/payment"
+                                className={`block px-4 py-2 text-sm ${
+                                    active ? "bg-gray-100 text-gray-900" : "text-gray-700"
+                                }`}
+                                >
+                                การชำระเงิน
+                                </Link>
+                            )}
+                            </MenuItem>
+                            <MenuItem>
+                            {({ active }) => (
+                                <Link
                                 href="/auth/signout"
                                 className={`block px-4 py-2 text-sm ${
                                     active ? "bg-gray-100 text-gray-900" : "text-gray-700"

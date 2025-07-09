@@ -1,5 +1,4 @@
 "use client"
-
 import type React from "react"
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useCallback } from "react"
@@ -51,7 +50,7 @@ interface UserCase {
   category_type: string
   consultation_status: string
   lawyer_id?: string
-  note:string
+  note: string
 }
 
 function isToday(date: Date) {
@@ -72,12 +71,15 @@ export default function LawyerProfilePage() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [selectedCaseId, setSelectedCaseId] = useState("")
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  // Changed from single date to date range
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<Date | null>(null)
   const [details, setDetails] = useState("")
   const { data: session } = useSession()
-
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [dateSelectionMode, setDateSelectionMode] = useState<"exact" | "range">("exact")
 
   useEffect(() => {
     const fetchLawyer = async () => {
@@ -87,12 +89,10 @@ export default function LawyerProfilePage() {
         const response = await fetch(`${backendUrl}/api/v1/lawyer/${id}`, {
           cache: "no-store",
         })
-
         if (!response.ok) {
           router.replace("/not-found")
           return
         }
-
         const result = await response.json()
         if (result.success) {
           console.log("lawyer data: ", result)
@@ -107,14 +107,12 @@ export default function LawyerProfilePage() {
         setLoading(false)
       }
     }
-
     fetchLawyer()
   }, [params.id, router])
 
   // Fetch user's cases without lawyer
   const fetchUserCases = useCallback(async () => {
     if (!session?.accessToken) return
-
     setCasesLoading(true)
     try {
       const response = await fetch(`${backendUrl}/api/v1/caseRequest/client`, {
@@ -122,7 +120,6 @@ export default function LawyerProfilePage() {
           Authorization: `Bearer ${session.accessToken}`,
         },
       })
-
       if (response.ok) {
         const result = await response.json()
         if (result.success) {
@@ -154,7 +151,6 @@ export default function LawyerProfilePage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const caseCreated = urlParams.get("caseCreated")
-
     if (caseCreated === "true") {
       // Refresh the cases list
       fetchUserCases()
@@ -175,23 +171,41 @@ export default function LawyerProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCaseId || !selectedDate || !selectedTime) {
-      alert("กรุณาเลือกคดี วันที่ และเวลาที่ต้องการ")
+
+    // Updated validation based on date selection mode
+    const hasValidDate = dateSelectionMode === "exact" ? selectedDate : startDate
+
+    if (!selectedCaseId || !hasValidDate || !selectedTime) {
+      const dateError =
+        dateSelectionMode === "exact" ? "กรุณาเลือกคดี วันที่ และเวลาที่ต้องการ" : "กรุณาเลือกคดี ช่วงวันที่ และเวลาที่ต้องการ"
+      alert(dateError)
       return
     }
 
-    // Combine date and time
-    const reservationDateTime = new Date(selectedDate)
+    // Create reservation datetime based on mode
+    const primaryDate = dateSelectionMode === "exact" ? selectedDate! : startDate!
+    const reservationDateTime = new Date(primaryDate)
     reservationDateTime.setHours(selectedTime.getHours())
     reservationDateTime.setMinutes(selectedTime.getMinutes())
     reservationDateTime.setSeconds(0)
     reservationDateTime.setMilliseconds(0)
 
-    // Payload to send
+    // Updated payload based on date selection mode
     const payload = {
       case_id: selectedCaseId,
       note: details,
       offered_Lawyers: lawyer._id,
+      date_selection_mode: dateSelectionMode,
+      ...(dateSelectionMode === "exact"
+        ? {
+            preferred_date: selectedDate!.toISOString(),
+            preferred_time: selectedTime.toTimeString().slice(0, 5),
+          }
+        : {
+            preferred_date_start: startDate!.toISOString(),
+            preferred_date_end: endDate ? endDate.toISOString() : startDate!.toISOString(),
+            preferred_time: selectedTime.toTimeString().slice(0, 5),
+          }),
     }
 
     try {
@@ -215,11 +229,14 @@ export default function LawyerProfilePage() {
       // Clear form
       setSelectedCaseId("")
       setSelectedDate(null)
+      setStartDate(null)
+      setEndDate(null)
       setSelectedTime(null)
       setDetails("")
+      setDateSelectionMode("exact") // Reset to default
       // Refresh cases list
       fetchUserCases()
-      router.push(`/case/${selectedCaseId}`);
+      router.push(`/case/${selectedCaseId}`)
     } catch (error) {
       alert("เกิดข้อผิดพลาด: " + error)
     }
@@ -253,17 +270,14 @@ export default function LawyerProfilePage() {
                       </div>
                     )}
                   </div>
-
                   {/* Name */}
                   <h1 className="text-2xl font-bold text-gray-900 mb-3">{user.name}</h1>
-
                   {/* Stars */}
                   <div className="flex gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-
                   {/* Location */}
                   <div className="flex items-center gap-2 mb-6">
                     <MapPin className="w-4 h-4 text-gray-600" />
@@ -271,10 +285,8 @@ export default function LawyerProfilePage() {
                       {user.location.district}, {user.location.province}
                     </span>
                   </div>
-
                   {/* Quote */}
                   <p className="text-lg text-gray-600 italic mb-4">{lawyer.slogan}</p>
-
                   {/* Specialization Tags */}
                   <div className="flex flex-wrap gap-2 mb-8 justify-center">
                     {[...lawyer.civilCase_specialized, ...lawyer.criminalCase_specialized]
@@ -288,14 +300,12 @@ export default function LawyerProfilePage() {
                         </div>
                       ))}
                   </div>
-
                   {/* Contact Button */}
                   <button className="bg-slate-700 text-white px-8 py-3 rounded-full font-medium hover:bg-slate-800 transition-all duration-200 shadow-md hover:shadow-lg">
                     ติดต่อทนาย
                   </button>
                 </div>
               </div>
-
               {/* Bio Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">เกี่ยวกับ {user.name}</h2>
@@ -326,7 +336,6 @@ export default function LawyerProfilePage() {
                 </div>
               </div>
             </div>
-
             {/* Right Column */}
             <div className="col-span-2 space-y-6">
               {/* License Card */}
@@ -347,7 +356,6 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
               </div>
-
               {/* Consultation Rates Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h3 className="font-bold text-gray-900 text-xl mb-6">อัตราค่าปรึกษากฎหมาย</h3>
@@ -368,31 +376,26 @@ export default function LawyerProfilePage() {
                   )}
                 </div>
               </div>
-
               {/* บทความ Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h3 className="font-bold text-gray-900 text-xl mb-6">บทความ</h3>
               </div>
-
               {/* forum Rates Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h3 className="font-bold text-gray-900 text-xl mb-6">ให้คำปรึกษา</h3>
               </div>
-
               {/* Reviews Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300 relative">
                 <div className="flex items-center gap-2 mb-6">
                   <h2 className="text-xl font-bold text-gray-900">รีวิว</h2>
                   <span className="text-gray-500">(1)</span>
                 </div>
-
                 {/* Stars */}
                 <div className="flex gap-1 mb-8">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-
                 {/* Review */}
                 <div className="flex gap-4 mb-8">
                   <div className="w-16 h-16 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
@@ -407,7 +410,6 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
               </div>
-
               {/* Contact Button */}
               <div className="fixed bottom-12 right-12 z-20">
                 <button
@@ -420,7 +422,6 @@ export default function LawyerProfilePage() {
                   </div>
                 </button>
               </div>
-
               {/* Modal Overlay */}
               {isOpen && (
                 <div
@@ -435,7 +436,6 @@ export default function LawyerProfilePage() {
                       <X className="w-5 h-5" />
                     </button>
                     <h2 className="text-xl text-black font-bold mb-4 text-center">จองขอคำปรึกษา</h2>
-
                     {/* Reservation Form */}
                     <form className="space-y-4" onSubmit={handleSubmit}>
                       <div>
@@ -460,14 +460,11 @@ export default function LawyerProfilePage() {
                               ) : (
                                 userCases.map((userCase) => (
                                   <option key={userCase._id} value={userCase._id}>
-                                    {userCase.title} (
-                                    {userCase.description.slice(0,50) }
-                                    )
+                                    {userCase.title} ({userCase.description.slice(0, 50)})
                                   </option>
                                 ))
                               )}
                             </select>
-
                             {/* Add Case Button */}
                             <button
                               type="button"
@@ -480,20 +477,93 @@ export default function LawyerProfilePage() {
                           </>
                         )}
                       </div>
-
+                      {/* Date Selection Mode Toggle */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">วันที่ต้องการ</label>
-                        <DatePicker
-                          selected={selectedDate}
-                          onChange={(date) => setSelectedDate(date)}
-                          dateFormat="dd/MM/yyyy"
-                          className="text-gray-600 w-full border rounded-md px-3 py-2"
-                          placeholderText="เลือกวันที่"
-                          required
-                          minDate={new Date()}
-                        />
-                      </div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">ประเภทการเลือกวันที่</label>
+                        <div className="flex gap-4 mb-4">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="dateMode"
+                              value="exact"
+                              color="blue"
+                              checked={dateSelectionMode === "exact"}
+                              onChange={() => {
+                                setDateSelectionMode("exact")
+                                // Clear range dates when switching to exact
+                                setStartDate(null)
+                                setEndDate(null)
+                              }}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-700">วันที่เฉพาะ</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="dateMode"
+                              value="range"
+                              checked={dateSelectionMode === "range"}
+                              onChange={() => {
+                                setDateSelectionMode("range")
+                                // Clear exact date when switching to range
+                                setSelectedDate(null)
+                              }}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-700">ช่วงวันที่</span>
+                          </label>
+                        </div>
 
+                        {/* Conditional Date Picker based on mode */}
+                        {dateSelectionMode === "exact" ? (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">วันที่ต้องการ</label>
+                            <DatePicker
+                              selected={selectedDate}
+                              onChange={(date) => setSelectedDate(date)}
+                              dateFormat="dd/MM/yyyy"
+                              className="text-gray-600 w-full border rounded-md px-3 py-2"
+                              placeholderText="เลือกวันที่เฉพาะ"
+                              required
+                              minDate={new Date()}
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {selectedDate
+                                ? `วันที่เลือก: ${selectedDate.toLocaleDateString("th-TH")}`
+                                : "เลือกวันที่ที่ต้องการนัดหมาย"}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">ช่วงวันที่ที่สะดวก</label>
+                            <DatePicker
+                              selected={startDate}
+                              onChange={(dates) => {
+                                const [start, end] = dates as [Date | null, Date | null]
+                                setStartDate(start)
+                                setEndDate(end)
+                              }}
+                              startDate={startDate}
+                              endDate={endDate}
+                              selectsRange
+                              dateFormat="dd/MM/yyyy"
+                              className="text-gray-600 w-full border rounded-md px-3 py-2"
+                              placeholderText="เลือกช่วงวันที่ที่สะดวก"
+                              required
+                              minDate={new Date()}
+                              isClearable
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {startDate && endDate
+                                ? `ช่วงวันที่: ${startDate.toLocaleDateString("th-TH")} - ${endDate.toLocaleDateString("th-TH")}`
+                                : startDate
+                                  ? `วันที่เริ่มต้น: ${startDate.toLocaleDateString("th-TH")}`
+                                  : "เลือกช่วงวันที่ที่คุณสะดวก"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
                         <DatePicker
@@ -507,13 +577,15 @@ export default function LawyerProfilePage() {
                           className="text-gray-600 w-full border rounded-md px-3 py-2"
                           placeholderText="เลือกเวลา"
                           required
-                          minTime={
-                            selectedDate && isToday(selectedDate) ? new Date() : new Date(new Date().setHours(8, 0))
-                          }
+                          minTime={(() => {
+                            const referenceDate = dateSelectionMode === "exact" ? selectedDate : startDate
+                            return referenceDate && isToday(referenceDate)
+                              ? new Date()
+                              : new Date(new Date().setHours(8, 0))
+                          })()}
                           maxTime={new Date(new Date().setHours(18, 0))}
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
                         <textarea
@@ -521,10 +593,9 @@ export default function LawyerProfilePage() {
                           rows={3}
                           value={details}
                           onChange={(e) => setDetails(e.target.value)}
-                          placeholder="รายละเอียดเพิ่มเติม"
+                          placeholder="รายละเอียดเพิ่มเติม เช่น ความต้องการพิเศษ หรือหัวข้อที่ต้องการปรึกษา"
                         />
                       </div>
-
                       <button
                         type="submit"
                         className="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
