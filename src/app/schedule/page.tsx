@@ -107,9 +107,9 @@ export default function SchedulePage() {
           "Content-Type": "application/json",
         },
       })
-
+      
       if (!response.ok) {
-        throw new Error("Failed to delete appointment")
+        throw new Error("ไม่สามารถลบการนัดหมายของทนายได้")
       }
 
       // Refresh appointments after successful deletion
