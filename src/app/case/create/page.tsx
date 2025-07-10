@@ -543,7 +543,7 @@ export default function CreateCasePage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-              {getFilteredLawyers().map((lawyer) => (
+              {getFilteredLawyers().slice(0, 3).map((lawyer) => (
                 <div
                   key={lawyer._id._id}
                   className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"

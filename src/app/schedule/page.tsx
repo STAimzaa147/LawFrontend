@@ -308,53 +308,32 @@ export default function SchedulePage() {
                     <div className="text-sm text-black font-medium pr-8">{appointment.task}</div>
                     <div className="text-xs text-gray-600 mt-1">สถานที่: {appointment.location}</div>
                     {appointment.note && <div className="text-xs text-gray-600 mt-1">หมายเหตุ: {appointment.note}</div>}
-                    <div className="flex items-center justify-between mt-2">
-                      <div
-                        className={`text-xs px-2 py-1 rounded inline-block ${
-                          appointment.status === "confirmed"
-                            ? "bg-green-100 text-green-800"
-                            : appointment.status === "cancelled"
-                              ? "bg-red-100 text-red-800"
-                              : appointment.status === "completed"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {appointment.status === "confirmed"
-                          ? "ยืนยันแล้ว"
-                          : appointment.status === "cancelled"
-                            ? "ยกเลิก"
-                            : appointment.status === "completed"
-                              ? "เสร็จสิ้น"
-                              : appointment.status}
-                      </div>
-                      <button
-                        onClick={() => deleteAppointment(appointment._id)}
-                        disabled={deletingId === appointment._id}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="ลบนัดหมาย"
-                      >
-                        {deletingId === appointment._id ? (
-                          <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => deleteAppointment(appointment._id)}
+                      disabled={deletingId === appointment._id}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="ลบนัดหมาย"
+                    >
+                      {deletingId === appointment._id ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 ))}
               </div>
