@@ -3,7 +3,10 @@
 import type React from "react"
 
 import { useCallback, useEffect, useState } from "react"
-import DatePicker from "react-datepicker"
+import { LocalizationProvider, TimePicker } from '@mui/x-date-pickers';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { th } from 'date-fns/locale'; // ✅ CORRECT
+import { TextField } from '@mui/material';
 import { useSession } from "next-auth/react"
 import Select from "react-select"
 
@@ -43,13 +46,6 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
   })
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [endTime, setEndTime] = useState<Date | null>(null)
-  const [baseDate] = useState(new Date())
-
-  // Helper function to check if a date is today
-  const isToday = (date: Date) => {
-    const today = new Date()
-    return date.toDateString() === today.toDateString()
-  }
 
   // Set time boundaries
   const minSelectableTime = new Date()
@@ -60,32 +56,24 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
 
   // Get current time for today's minimum time
   const getCurrentMinTime = () => {
-    if (isToday(baseDate)) {
-      const now = new Date()
-      const currentHour = now.getHours()
-      const currentMinute = now.getMinutes()
-
-      // Round up to next 30-minute interval
-      const roundedMinute = currentMinute <= 30 ? 30 : 0
-      const roundedHour = currentMinute > 30 ? currentHour + 1 : currentHour
-
-      const minTime = new Date()
-      minTime.setHours(roundedHour, roundedMinute, 0, 0)
-
-      return minTime > minSelectableTime ? minTime : minSelectableTime
-    }
-    return minSelectableTime
+  const now = new Date();
+  now.setSeconds(0, 0);
+  // Optionally round up to nearest 15 minutes
+  const remainder = now.getMinutes() % 15;
+  if (remainder !== 0) {
+    now.setMinutes(now.getMinutes() + (15 - remainder));
   }
+  return now;
+};
 
-  // Get minimum time for end time based on start time
-  const getEndTimeMin = () => {
-    if (startTime) {
-      const minEndTime = new Date(startTime)
-      minEndTime.setMinutes(minEndTime.getMinutes() + 30) // At least 30 minutes after start
-      return minEndTime
-    }
-    return getCurrentMinTime()
+const getEndTimeMin = () => {
+  if (!startTime) {
+    return new Date(0, 0, 0, 0, 0);
   }
+  const endMin = new Date(startTime);
+  endMin.setMinutes(endMin.getMinutes() + 15); // Minimum 15 minutes after startTime
+  return endMin;
+};
 
   // Reset end time if it's before the new start time
   useEffect(() => {
@@ -288,55 +276,64 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
             />
             </div>
 
-            {/* Time Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">เวลาเริ่ม</label>
-                      <div className="relative">
-                        <div className="w-full border-2 border-blue-400 rounded-lg px-3 py-2 focus-within:border-blue-600 transition-colors">
-                          <DatePicker
-                            selected={startTime}
-                            onChange={handleStartTimeChange}
-                            showTimeSelect
-                            showTimeSelectOnly
-                            timeIntervals={30}
-                            timeCaption="เวลา"
-                            dateFormat="HH:mm"
-                            placeholderText="เลือกเวลาเริ่ม"
-                            className="w-full outline-none bg-transparent text-gray-700 placeholder-gray-400"
-                            required
-                            minTime={getCurrentMinTime()}
-                            maxTime={maxSelectableTime}
-                            timeFormat="HH:mm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-            
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">เวลาจบ</label>
-                      <div className="relative">
-                        <div className="w-full border-2 border-blue-400 rounded-lg px-3 py-2 focus-within:border-blue-600 transition-colors">
-                          <DatePicker
-                            selected={endTime}
-                            onChange={handleEndTimeChange}
-                            showTimeSelect
-                            showTimeSelectOnly
-                            timeIntervals={30}
-                            timeCaption="เวลา"
-                            dateFormat="HH:mm"
-                            placeholderText="เลือกเวลาจบ"
-                            className="w-full outline-none bg-transparent text-gray-700 placeholder-gray-400"
-                            required
-                            minTime={getEndTimeMin()}
-                            maxTime={maxSelectableTime}
-                            timeFormat="HH:mm"
-                            disabled={!startTime}
-                          />
-                        </div>
-                      </div>
-                    </div>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={th}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">เวลาเริ่ม</label>
+                  <div className="w-full border-2 border-blue-400 rounded-lg px-3 py-2 focus-within:border-blue-600 transition-colors">
+                    <TimePicker
+                      value={startTime}
+                      onChange={handleStartTimeChange}
+                      minutesStep={15}
+                      ampm={false}
+                      minTime={getCurrentMinTime()}
+                      maxTime={maxSelectableTime}
+                      enableAccessibleFieldDOMStructure={false} // ✅ Add this
+                      slots={{ textField: TextField }}
+                      slotProps={{
+                        textField: {
+                          placeholder: 'เลือกเวลาเริ่ม',
+                          variant: 'standard',
+                          InputProps: {
+                            disableUnderline: true,
+                            className: 'w-full bg-transparent text-gray-700',
+                          },
+                          fullWidth: true,
+                        },
+                      }}
+                    />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">เวลาจบ</label>
+                  <div className="w-full border-2 border-blue-400 rounded-lg px-3 py-2 focus-within:border-blue-600 transition-colors">
+                    <TimePicker
+                      value={endTime}
+                      onChange={handleEndTimeChange}
+                      minutesStep={15}
+                      ampm={false}
+                      minTime={getEndTimeMin()}
+                      maxTime={maxSelectableTime}
+                      disabled={!startTime}
+                      enableAccessibleFieldDOMStructure={false} // ✅ Add this
+                      slots={{ textField: TextField }}
+                      slotProps={{
+                        textField: {
+                          placeholder: 'เลือกเวลาจบ',
+                          variant: 'standard',
+                          InputProps: {
+                            disableUnderline: true,
+                            className: 'w-full bg-transparent text-gray-700',
+                          },
+                          fullWidth: true,
+                        },
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </LocalizationProvider>
 
             {/* Permission selection for lawyers */}
                 {session?.user?.role === "lawyer" ? (
