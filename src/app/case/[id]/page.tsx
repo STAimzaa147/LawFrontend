@@ -775,6 +775,7 @@ export default function CaseDetailsPage() {
                       alt={caseData.client_id.name}
                       width={48}
                       height={48}
+                      unoptimized
                       className="object-cover w-full h-full"
                     />
                   </div>
@@ -807,6 +808,7 @@ export default function CaseDetailsPage() {
                           alt={caseData.lawyer_id.name}
                           width={48}
                           height={48}
+                          unoptimized
                           className="object-cover w-full h-full"
                         />
                       </div>
@@ -832,6 +834,7 @@ export default function CaseDetailsPage() {
                               alt={lawyer.name}
                               width={48}
                               height={48}
+                              unoptimized
                               className="object-cover w-full h-full"
                             />
                           </div>
