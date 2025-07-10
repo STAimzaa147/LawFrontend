@@ -355,7 +355,7 @@ export default function CaseDetailsPage() {
 
   const handleAccept = async () => {
   try {
-    const response = await fetch(`${backendUrl}/api/v1/hiring/create/${caseId}`, {
+    const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
