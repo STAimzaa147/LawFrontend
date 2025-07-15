@@ -21,6 +21,7 @@ import {
   Clock,
   Send,
   Building,
+  CheckSquare,
 } from "lucide-react"
 
 type FormData = {
@@ -167,20 +168,11 @@ export default function CreateCasePage() {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.description.trim()) {
-      setError("Description is required")
-      return
-    }
-    if (!formData.category_type) {
-      setError("Category type is required")
-      return
-    }
-
+  // Extract case creation logic into a separate function
+  const createCase = async () => {
+    console.log("Case Without Lawyer Created")
     setLoading(true)
     setError("")
-
     try {
       const submitFormData = new FormData()
       submitFormData.append("category_type", formData.category_type)
@@ -201,7 +193,6 @@ export default function CreateCasePage() {
       })
 
       const data = await res.json()
-
       if (data.success) {
         const returnUrl = localStorage.getItem("caseCreateReturnUrl")
         if (returnUrl) {
@@ -211,22 +202,45 @@ export default function CreateCasePage() {
         } else {
           router.push("/case")
         }
+        return true
       } else {
         setError(data.message || "Failed to create case")
+        return false
       }
     } catch (error) {
       console.error("Error creating case:", error)
       setError("An error occurred while creating the case")
+      return false
     } finally {
       setLoading(false)
     }
   }
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.description.trim()) {
+      setError("Description is required")
+      return
+    }
+    if (!formData.category_type) {
+      setError("Category type is required")
+      return
+    }
+
+    if (selectedLawyers.length > 0) {
+      // Just open modal, don't create anything yet
+      setIsConsultationModalOpen(true)
+    } else {
+      // No lawyers: create case directly
+      createCase()
+    }
+  }
+
   const getFilteredLawyers = () => {
     if (formData.category_type === "unknown") {
-      return recommendedLawyers
+      return recommendedLawyers.slice(0, 3)
     }
-    return recommendedLawyers.filter((lawyer) => {
+    const filtered = recommendedLawyers.filter((lawyer) => {
       if (formData.category_type === "civil") {
         return lawyer.civilCase_specialized.length > 0
       } else if (formData.category_type === "criminal") {
@@ -234,6 +248,7 @@ export default function CreateCasePage() {
       }
       return true
     })
+    return filtered.slice(0, 3)
   }
 
   const handleLawyerSelection = (lawyerId: string) => {
@@ -246,27 +261,40 @@ export default function CreateCasePage() {
     })
   }
 
-  const handleSendConsultationRequest = () => {
-    if (selectedLawyers.length === 0) {
-      setError("กรุณาเลือกทนายความอย่างน้อย 1 คน")
+  const handleSelectAllLawyers = () => {
+    const filteredLawyers = getFilteredLawyers()
+    const allLawyerIds = filteredLawyers.map((lawyer) => lawyer._id._id)
+    if (selectedLawyers.length === allLawyerIds.length) {
+      // If all are selected, deselect all
+      setSelectedLawyers([])
+    } else {
+      // Select all visible lawyers
+      setSelectedLawyers(allLawyerIds)
+    }
+  }
+
+  const handleLawyerCardClick = (lawyer: Lawyer, e: React.MouseEvent) => {
+    // Prevent opening profile if clicking on checkbox or label
+    if (
+      (e.target as HTMLElement).closest('input[type="checkbox"]') ||
+      (e.target as HTMLElement).closest('label[for*="lawyer-"]')
+    ) {
       return
     }
-    if (!formData.description.trim()) {
-      setError("กรุณากรอกรายละเอียดคดีก่อนส่งคำขอปรึกษา")
-      return
-    }
-    setIsConsultationModalOpen(true)
+    console.log("new tab : ", lawyer)
+    // Open a new tab to the lawyer's profile
+    window.open(`/lawyers/${lawyer._id._id}`, "_blank") // Adjust the URL path if needed
   }
 
   const handleConsultationSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setConsultationLoading(true);
-  setError("");
+    e.preventDefault()
+    setConsultationLoading(true)
+    setError("")
+    console.log("Case With Lawyer Created")
 
-  try {
-    const requests = selectedLawyers.map((lawyerId) => {
+    try {
       const consultationData = {
-        lawyerId, // now sending one lawyer at a time
+        offered_Lawyers: selectedLawyers,
         category_type: formData.category_type,
         description: formData.description,
         note: formData.note,
@@ -276,43 +304,58 @@ export default function CreateCasePage() {
         selectedTime,
         details: consultationDetails,
         clientId: session?.user?.id,
-      };
+      }
 
-      return fetch(`${backendUrl}/api/v1/caseRequest`, {
+      console.log("Sending consultation data:", consultationData)
+
+      const res = await fetch(`${backendUrl}/api/v1/caseRequest`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(consultationData),
-      }).then((res) => res.json());
-    });
+      })
 
-    const results = await Promise.all(requests);
+      const result = await res.json()
 
-    const allSucceeded = results.every((res) => res.success);
-    const failed = results.filter((res) => !res.success);
+      if (result.success) {
+        // Close the modal
+        setIsConsultationModalOpen(false)
 
-    if (allSucceeded) {
-      setIsConsultationModalOpen(false);
-      setSelectedLawyers([]);
-      setConsultationDetails("");
-      setSelectedDate(null);
-      setStartDate(null);
-      setEndDate(null);
-      setSelectedTime(null);
-      alert("ส่งคำขอปรึกษาเรียบร้อยแล้ว ทนายความจะติดต่อกลับภายใน 24 ชั่วโมง");
-    } else {
-      console.error("Some requests failed:", failed);
-      setError("บางคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        // Reset form
+        setSelectedLawyers([])
+        setConsultationDetails("")
+        setSelectedDate(null)
+        setStartDate(null)
+        setEndDate(null)
+        setSelectedTime(null)
+
+        alert("ส่งคำขอปรึกษาเรียบร้อยแล้ว ทนายความจะติดต่อกลับภายใน 24 ชั่วโมง")
+
+        // ✅ DON'T CALL createCase() AGAIN — this would duplicate the case
+        // You already created the case with lawyers via consultationData
+
+        // ✅ Optional: Redirect
+        const returnUrl = localStorage.getItem("caseCreateReturnUrl")
+        if (returnUrl) {
+          localStorage.removeItem("caseCreateReturnUrl")
+          const separator = returnUrl.includes("?") ? "&" : "?"
+          router.push(`${returnUrl}${separator}caseCreated=true`)
+        } else {
+          router.push("/case")
+        }
+      } else {
+        console.error("Consultation request failed:", result)
+        setError("ไม่สามารถส่งคำขอปรึกษาได้ กรุณาลองใหม่อีกครั้ง")
+      }
+    } catch (error) {
+      console.error("Error sending consultation request:", error)
+      setError("เกิดข้อผิดพลาดในการส่งคำขอปรึกษา")
+    } finally {
+      setConsultationLoading(false)
     }
-  } catch (error) {
-    console.error("Error sending consultation request:", error);
-    setError("เกิดข้อผิดพลาดในการส่งคำขอปรึกษา");
-  } finally {
-    setConsultationLoading(false);
   }
-};
 
   const isToday = (date: Date) => {
     const today = new Date()
@@ -414,6 +457,29 @@ export default function CreateCasePage() {
               <p className="text-sm text-gray-500 mt-1">{formData.description.length} ตัวอักษร</p>
             </div>
 
+            {/* หมายเรียก Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Upload className="w-4 h-4 inline mr-2" />
+                แนบหมายเรียก (ถ้ามี)
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  multiple={false}
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-gray-400" />
+                  <span className="text-sm text-gray-600">คลิกเพื่ออัปโหลดไฟล์ หรือ ลากไฟล์มาวางที่นี่</span>
+                  <span className="text-xs text-gray-500">PDF, DOC, DOCX, TXT, JPG, PNG, GIF (สูงสุด 10MB ต่อไฟล์)</span>
+                </label>
+              </div>
+            </div>
+
             {/* File Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -476,31 +542,6 @@ export default function CreateCasePage() {
                 className="w-full px-4 py-3 border border-gray-300 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
               />
             </div>
-
-            {/* Form Actions */}
-            <div className="flex gap-4 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 px-6 py-3 bg-[#C9A55C] text-white rounded-lg hover:bg-[#C9A55C]/80 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                    กำลังสร้าง...
-                  </>
-                ) : (
-                  "สร้างคดี"
-                )}
-              </button>
-            </div>
           </form>
         </div>
 
@@ -511,18 +552,22 @@ export default function CreateCasePage() {
               <Award className="w-6 h-6 text-[#C9A55C]" />
               <h2 className="text-xl font-bold text-gray-900">ทนายความที่แนะนำ</h2>
             </div>
-            {selectedLawyers.length > 0 && (
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">เลือกแล้ว {selectedLawyers.length} คน</span>
+            <div className="flex items-center gap-4">
+              {getFilteredLawyers().length > 0 && (
                 <button
-                  onClick={handleSendConsultationRequest}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#C9A55C] text-white rounded-lg hover:bg-[#C9A55C]/80 transition font-medium text-sm"
+                  onClick={handleSelectAllLawyers}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
-                  <Send className="w-4 h-4" />
-                  ส่งคำขอปรึกษา
+                  <CheckSquare className="w-4 h-4" />
+                  {selectedLawyers.length === getFilteredLawyers().length ? "ยกเลิกทั้งหมด" : "เลือกทั้งหมด"}
                 </button>
-              </div>
-            )}
+              )}
+              {selectedLawyers.length > 0 && (
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">เลือกแล้ว {selectedLawyers.length} คน</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {lawyersLoading ? (
@@ -543,23 +588,13 @@ export default function CreateCasePage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-              {getFilteredLawyers().slice(0, 3).map((lawyer) => (
+              {getFilteredLawyers().map((lawyer) => (
                 <div
                   key={lawyer._id._id}
-                  className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"
+                  className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={(e) => handleLawyerCardClick(lawyer, e)}
                 >
                   <div className="flex flex-col md:flex-row gap-6">
-                    {/* Checkbox */}
-                    <div className="flex-shrink-0 flex items-start">
-                      <input
-                        type="checkbox"
-                        id={`lawyer-${lawyer._id._id}`}
-                        checked={selectedLawyers.includes(lawyer._id._id)}
-                        onChange={() => handleLawyerSelection(lawyer._id._id)}
-                        className="w-5 h-5 text-[#C9A55C] border-gray-300 rounded focus:ring-[#C9A55C] focus:ring-2 mt-1"
-                      />
-                    </div>
-
                     {/* Lawyer Image */}
                     <div className="flex-shrink-0">
                       <Image
@@ -575,12 +610,10 @@ export default function CreateCasePage() {
                     {/* Lawyer Info */}
                     <div className="flex-1">
                       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                        <div>
-                          <label htmlFor={`lawyer-${lawyer._id._id}`} className="cursor-pointer">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-1 hover:text-[#C9A55C] transition-colors">
-                              {lawyer._id.name}
-                            </h3>
-                          </label>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1 hover:text-[#C9A55C] transition-colors">
+                            {lawyer._id.name}
+                          </h3>
 
                           {/* Law Firm */}
                           <div className="flex items-center gap-2 mb-2">
@@ -639,13 +672,24 @@ export default function CreateCasePage() {
                           </div>
                         </div>
 
-                        {/* Contact Info */}
+                        {/* Contact Info and Checkbox */}
                         <div className="flex flex-col gap-3 md:items-end">
                           <div className="text-sm text-gray-600 space-y-1">
                             <div className="flex items-center gap-2">
                               <Phone className="w-4 h-4" />
                               <span>{lawyer._id.tel}</span>
                             </div>
+                          </div>
+
+                          {/* Centered Checkbox */}
+                          <div className="flex justify-center md:justify-end">
+                            <input
+                              type="checkbox"
+                              id={`lawyer-${lawyer._id._id}`}
+                              checked={selectedLawyers.includes(lawyer._id._id)}
+                              onChange={() => handleLawyerSelection(lawyer._id._id)}
+                              className="w-5 h-5 text-[#C9A55C] border-gray-300 rounded focus:ring-[#C9A55C] focus:ring-2"
+                            />
                           </div>
                         </div>
                       </div>
@@ -662,6 +706,35 @@ export default function CreateCasePage() {
               <p>ไม่พบทนายความที่แนะนำสำหรับประเภทคดีนี้</p>
             </div>
           )}
+        </div>
+
+        {/* Form Actions - Moved to bottom before tips */}
+        <div className="mt-8 bg-white rounded-2xl shadow-sm p-8">
+          <div className="flex gap-4 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+            >
+              ยกเลิก
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-[#C9A55C] text-white rounded-lg hover:bg-[#C9A55C]/80 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                  กำลังสร้าง...
+                </>
+              ) : selectedLawyers.length > 0 ? (
+                "ส่งคำขอปรึกษาและสร้างคดี"
+              ) : (
+                "สร้างคดี"
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Consultation Request Modal */}
@@ -798,26 +871,30 @@ export default function CreateCasePage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
-                  <DatePicker
-                    selected={selectedTime}
-                    onChange={(time) => setSelectedTime(time)}
-                    showTimeSelect
-                    showTimeSelectOnly
-                    timeIntervals={30}
-                    timeCaption="เวลา"
-                    dateFormat="HH:mm"
-                    className="text-gray-600 w-full border rounded-md px-3 py-2"
-                    placeholderText="เลือกเวลา"
-                    required
-                    minTime={(() => {
-                      const referenceDate = dateSelectionMode === "exact" ? selectedDate : startDate
-                      return referenceDate && isToday(referenceDate) ? new Date() : new Date(new Date().setHours(8, 0))
-                    })()}
-                    maxTime={new Date(new Date().setHours(18, 0))}
-                  />
-                </div>
+                {dateSelectionMode === "exact" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
+                    <DatePicker
+                      selected={selectedTime}
+                      onChange={(time) => setSelectedTime(time)}
+                      showTimeSelect
+                      showTimeSelectOnly
+                      timeIntervals={30}
+                      timeCaption="เวลา"
+                      dateFormat="HH:mm"
+                      className="text-gray-600 w-full border rounded-md px-3 py-2"
+                      placeholderText="เลือกเวลา"
+                      required
+                      minTime={(() => {
+                        const referenceDate = selectedDate
+                        return referenceDate && isToday(referenceDate)
+                          ? new Date()
+                          : new Date(new Date().setHours(8, 0))
+                      })()}
+                      maxTime={new Date(new Date().setHours(18, 0))}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
@@ -843,7 +920,7 @@ export default function CreateCasePage() {
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      ยืนยันการส่งคำขอ
+                      ยืนยันการส่งคำขอและสร้างคดี
                     </>
                   )}
                 </button>

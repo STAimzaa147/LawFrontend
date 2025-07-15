@@ -564,28 +564,30 @@ export default function LawyerProfilePage() {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
-                        <DatePicker
-                          selected={selectedTime}
-                          onChange={(time) => setSelectedTime(time)}
-                          showTimeSelect
-                          showTimeSelectOnly
-                          timeIntervals={30}
-                          timeCaption="เวลา"
-                          dateFormat="HH:mm"
-                          className="text-gray-600 w-full border rounded-md px-3 py-2"
-                          placeholderText="เลือกเวลา"
-                          required
-                          minTime={(() => {
-                            const referenceDate = dateSelectionMode === "exact" ? selectedDate : startDate
-                            return referenceDate && isToday(referenceDate)
+                      {dateSelectionMode === "exact" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
+                            <DatePicker
+                            selected={selectedTime}
+                            onChange={(time) => setSelectedTime(time)}
+                            showTimeSelect
+                            showTimeSelectOnly
+                            timeIntervals={30}
+                            timeCaption="เวลา"
+                            dateFormat="HH:mm"
+                            className="text-gray-600 w-full border rounded-md px-3 py-2"
+                            placeholderText="เลือกเวลา"
+                            required
+                            minTime={(() => {
+                              const referenceDate = selectedDate
+                              return referenceDate && isToday(referenceDate)
                               ? new Date()
                               : new Date(new Date().setHours(8, 0))
-                          })()}
-                          maxTime={new Date(new Date().setHours(18, 0))}
-                        />
-                      </div>
+                            })()}
+                            maxTime={new Date(new Date().setHours(18, 0))}
+                            />
+                          </div>
+                      )}
                       <div>
                         <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>
                         <textarea
