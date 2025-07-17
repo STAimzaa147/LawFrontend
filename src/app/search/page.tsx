@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
-import { Search, Users, FileText, Scale } from "lucide-react"
-import Link from "next/link";
-import Image from "next/image";
-import SearchBar from "@/components/SearchBar";
+import { Search, Users, FileText, Scale, Filter } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
+import SearchBar from "@/components/SearchBar"
 
 interface Location {
   district: string
@@ -21,7 +21,7 @@ interface LawyerUser {
 }
 
 interface Lawyer {
-   _id: LawyerUser
+  _id: LawyerUser
   lawfirm_name: string
   slogan: string
   summary: string
@@ -42,7 +42,7 @@ interface Lawyer {
 interface News {
   _id: string
   title: string
-  content: string;
+  content: string
   image: string
   createdAt: string
   category: string
@@ -81,6 +81,9 @@ export default function SearchPage() {
   })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("all")
+  const [minPrice, setMinPrice] = useState<number | undefined>()
+  const [maxPrice, setMaxPrice] = useState<number | undefined>()
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     if (query) {
@@ -88,25 +91,39 @@ export default function SearchPage() {
     }
   }, [query])
 
-  const fetchSearchResults = async (searchQuery: string) => {
+  const fetchSearchResults = async (searchQuery: string, min?: number, max?: number) => {
     setLoading(true)
     try {
-      // Fetch all data in parallel
+      const lawyerQueryParams = new URLSearchParams({ search: searchQuery })
+      if (min !== undefined) lawyerQueryParams.append("min", String(min))
+      if (max !== undefined) lawyerQueryParams.append("max", String(max))
+
       const [lawyersRes, newsRes, forumsRes] = await Promise.all([
-        fetch(`/api/lawyers?search=${encodeURIComponent(searchQuery)}`),
+        fetch(`/api/lawyers?${lawyerQueryParams.toString()}`),
         fetch(`/api/news?search=${encodeURIComponent(searchQuery)}`),
         fetch(`/api/forums?search=${encodeURIComponent(searchQuery)}`),
-      ])
+      ]);
 
-      const [lawyers, news, forums] = await Promise.all([lawyersRes.json(), newsRes.json(), forumsRes.json()])
+      if (!lawyersRes.ok || !newsRes.ok || !forumsRes.ok) {
+        throw new Error("One of the requests failed");
+      }
 
+      const [lawyers, news, forums] = await Promise.all([
+        lawyersRes.json(),
+        newsRes.json(),
+        forumsRes.json(),
+      ]);
+      
       setResults({ lawyers, news, forums })
-      console.log("lawyer's data : ",lawyers)
     } catch (error) {
       console.error("Error fetching search results:", error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFilterSearch = () => {
+    fetchSearchResults(query, minPrice, maxPrice)
   }
 
   const totalResults = results.lawyers.length + results.news.length + results.forums.length
@@ -125,14 +142,82 @@ export default function SearchPage() {
   }
 
   return (
-    
     <div className="container mx-auto px-8">
-      <SearchBar/>
-      {/* Search Header */}
+      {/* Enhanced Search Bar with Filters */}
       <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1">
+            <SearchBar />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+              showFilters
+                ? "bg-[#C9A55C] text-white border-[#C9A55C]"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            ตัวกรอง
+          </button>
+        </div>
+
+        {/* Collapsible Filter Section */}
+        {showFilters && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">ช่วงราคาค่าปรึกษา (บาท)</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C9A55C] focus:border-transparent"
+                    placeholder="ราคาขั้นต่ำ"
+                    value={minPrice ?? ""}
+                    onChange={(e) => setMinPrice(Number(e.target.value) || undefined)}
+                  />
+                  <span className="text-gray-500">-</span>
+                  <input
+                    type="number"
+                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C9A55C] focus:border-transparent"
+                    placeholder="ราคาสูงสุด"
+                    value={maxPrice ?? ""}
+                    onChange={(e) => setMaxPrice(Number(e.target.value) || undefined)}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleFilterSearch}
+                  className="bg-[#C9A55C] text-white px-6 py-2 rounded-md hover:bg-[#B8944A] transition-colors flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  ค้นหา
+                </button>
+                <button
+                  onClick={() => {
+                    setMinPrice(undefined)
+                    setMaxPrice(undefined)
+                    fetchSearchResults(query)
+                  }}
+                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  ล้าง
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Search Header */}
         <div className="flex items-center gap-3 mb-4">
           <Search className="w-6 h-6 text-[#C9A55C]" />
           <h1 className="text-2xl font-bold text-white">ผลการค้นหา: &quot;{query}&quot;</h1>
+          {(minPrice !== undefined || maxPrice !== undefined) && (
+            <span className="bg-[#C9A55C] text-white px-3 py-1 rounded-full text-sm">
+              ราคา: {minPrice || 0} - {maxPrice || "∞"} บาท
+            </span>
+          )}
         </div>
         <p className="text-gray-400">พบ {totalResults} รายการที่เกี่ยวข้อง</p>
       </div>
@@ -187,11 +272,8 @@ export default function SearchPage() {
             {results.forums.length > 0 && <ForumsSection forums={results.forums.slice(0, 3)} />}
           </div>
         )}
-
         {activeTab === "lawyers" && <LawyersSection lawyers={results.lawyers} />}
-
         {activeTab === "news" && <NewsSection news={results.news} />}
-
         {activeTab === "forums" && <ForumsSection forums={results.forums} />}
       </div>
     </div>
@@ -233,7 +315,6 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
                       </div>
                     )}
                   </div>
-
                   {/* Name + Slogan */}
                   <div className="flex-1 flex flex-col justify-start">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">{lawyer._id.name}</h3>
@@ -241,23 +322,23 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 mb-2">
-                      {lawyer.civilCase_specialized.map((specialty, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                        >
-                          {specialty}
-                        </span>
-                      ))}
-                      {lawyer.criminalCase_specialized.map((specialty, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                        >
-                          {specialty}
-                        </span>
-                      ))}
-                    </div>
+                  {lawyer.civilCase_specialized.map((specialty, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                      {specialty}
+                    </span>
+                  ))}
+                  {lawyer.criminalCase_specialized.map((specialty, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                    >
+                      {specialty}
+                    </span>
+                  ))}
+                </div>
                 <div className="space-y-2 text-sm text-gray-600 mb-4">
                   <p>
                     ค่าปรึกษา: {lawyer.consultationRate.min.toLocaleString()}-
@@ -290,11 +371,11 @@ function LawyersSection({ lawyers }: { lawyers: Lawyer[] }) {
                 </Link>
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
 
 function NewsSection({ news }: { news: News[] }) {
@@ -315,7 +396,7 @@ function NewsSection({ news }: { news: News[] }) {
               {article.image && (
                 <div className="w-32 h-24 flex-shrink-0">
                   <Image
-                    src={article.image}
+                    src={article.image || "/placeholder.svg"}
                     alt={article.title}
                     width={128}
                     height={96}
@@ -324,37 +405,35 @@ function NewsSection({ news }: { news: News[] }) {
                   />
                 </div>
               )}
-
               {/* ข้อมูลข่าว */}
               <div className="flex-1">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex flex-wrap gap-1">
-                    {[article.category].filter(Boolean).slice(0, 2).map((cat, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300"
-                      >
-                        {cat}
-                      </span>
-                    ))}
+                    {[article.category]
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((cat, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300"
+                        >
+                          {cat}
+                        </span>
+                      ))}
                   </div>
                   <span className="text-sm text-gray-500">
                     {new Date(article.createdAt).toLocaleDateString("th-TH")}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2 text-gray-900">{article.title}</h3>
-                <p className="text-gray-600 mb-3">
-                  {article.content.slice(0, 100)}...
-                </p>
+                <p className="text-gray-600 mb-3">{article.content.slice(0, 100)}...</p>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     {article.view_count && <span>{article.view_count.toLocaleString()} ครั้ง</span>}
                     {article.like_count && <span>{article.like_count.toLocaleString()} ถูกใจ</span>}
                   </div>
                   <Link href={`/news/${article._id}`}>
-                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                      อ่านเพิ่มเติม →
-                    </button>
+                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">อ่านเพิ่มเติม →</button>
                   </Link>
                 </div>
               </div>
@@ -384,7 +463,7 @@ function ForumsSection({ forums }: { forums: Forum[] }) {
               {forum.image && (
                 <div className="w-32 h-24 flex-shrink-0">
                   <Image
-                    src={forum.image}
+                    src={forum.image || "/placeholder.svg"}
                     alt={forum.title}
                     width={128}
                     height={96}
@@ -393,16 +472,13 @@ function ForumsSection({ forums }: { forums: Forum[] }) {
                   />
                 </div>
               )}
-
               {/* เนื้อหา */}
               <div className="flex-1">
                 <div className="flex justify-between items-start mb-2">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-300">
                     {forum.category}
                   </span>
-                  <span className="text-sm text-gray-500">
-                    {new Date(forum.createdAt).toLocaleDateString("th-TH")}
-                  </span>
+                  <span className="text-sm text-gray-500">{new Date(forum.createdAt).toLocaleDateString("th-TH")}</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2 text-gray-900">{forum.title}</h3>
                 <p className="text-gray-600 mb-3 line-clamp-2">{forum.content}</p>
@@ -414,9 +490,7 @@ function ForumsSection({ forums }: { forums: Forum[] }) {
                     <span>{forum.like_count} ถูกใจ</span>
                   </div>
                   <Link href={`/forum/${forum._id}`}>
-                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                      เข้าร่วมสนทนา →
-                    </button>
+                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">เข้าร่วมสนทนา →</button>
                   </Link>
                 </div>
               </div>

@@ -484,7 +484,7 @@ export default function CreateCasePage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Upload className="w-4 h-4 inline mr-2" />
-                เอกสารแนบ (ไม่จำเป็น)
+                เอกสารแนบ (ถ้ามี)
               </label>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                 <input

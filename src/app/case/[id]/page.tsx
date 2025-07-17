@@ -379,30 +379,30 @@ export default function CaseDetailsPage() {
   }
 };
 
-// const handleReject = async () => {
-//   try {
-//     const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseRequestId}/reject`, {
-//       method: "PATCH",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer ${session?.accessToken}`, // if using auth
-//       },
-//     });
+const handleReject = async () => {
+  try {
+    const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session?.accessToken}`, // if using auth
+      },
+    });
 
-//     const data = await response.json();
+    const data = await response.json();
 
-//     if (response.ok && data.success) {
-//       alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว");
-//       // You can also refetch or update UI here
-//     } else {
-//       console.error(data.message || "เกิดข้อผิดพลาด");
-//       alert("การปฏิเสธคำขอล้มเหลว");
-//     }
-//   } catch (error) {
-//     console.error("Error rejecting request:", error);
-//     alert("เกิดข้อผิดพลาดขณะปฏิเสธคำขอ");
-//   }
-// };
+    if (response.ok && data.success) {
+      alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว");
+      // You can also refetch or update UI here
+    } else {
+      console.error(data.message || "เกิดข้อผิดพลาด");
+      alert("การปฏิเสธคำขอล้มเหลว");
+    }
+  } catch (error) {
+    console.error("Error rejecting request:", error);
+    alert("เกิดข้อผิดพลาดขณะปฏิเสธคำขอ");
+  }
+};
 
 
   if (!session) {
@@ -514,14 +514,14 @@ export default function CaseDetailsPage() {
                   ✅
                   ยอมรับ
                 </button>
-                {/* <button
+                <button
                   onClick={handleReject}
                   className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition disabled:opacity-50"
                 >
                   ❌
                   ปฏิเสธ
                 </button>
-                <button
+                {/* <button
                   onClick={handleDelete}
                   disabled={deleteLoading}
                   className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"

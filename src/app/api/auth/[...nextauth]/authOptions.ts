@@ -59,6 +59,11 @@ export const authOptions : NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: "openid email profile https://www.googleapis.com/auth/calendar",
+        },
+      },
     }),
 
     // ✅ Facebook OAuth
@@ -114,6 +119,10 @@ export const authOptions : NextAuthOptions = {
       } catch (error) {
         console.error("Social login error:", error);
       }
+      // ✅ Store Google access_token (for Calendar API)
+      if (account.provider === "google" && account.access_token) {
+        token.googleAccessToken = account.access_token;
+      }
     }
 
     return token;
@@ -126,6 +135,7 @@ export const authOptions : NextAuthOptions = {
     session.user.role = token.role;
     session.user.image = token.picture;
     session.accessToken = token.accessToken;
+    session.googleAccessToken = token.googleAccessToken;
     return session;
   },
 },
