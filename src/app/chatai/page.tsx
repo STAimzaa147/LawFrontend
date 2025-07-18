@@ -17,7 +17,7 @@ interface Message {
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([
-    
+
   ])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -55,9 +55,10 @@ export default function Home() {
 
       setMessages((prevMessages) =>
         formattedMessages.length === 0
-          ? [prevMessages[0]]
-          : [prevMessages[0], ...formattedMessages]
+          ? prevMessages[0] ? [prevMessages[0]] : []
+          : prevMessages[0] ? [prevMessages[0], ...formattedMessages] : [...formattedMessages]
       )
+
     } catch (err) {
       console.error("Failed to load chats", err)
     }

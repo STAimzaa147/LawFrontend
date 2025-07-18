@@ -5,6 +5,7 @@ import Image from "next/image"
 import { useState,useEffect } from "react"
 import { Search, Plus, ArrowUp } from "lucide-react"
 import { useSession } from "next-auth/react"
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatContact {
   id: string
@@ -13,17 +14,27 @@ interface ChatContact {
   lastMessage?: string
 }
 
+type Contact = {
+  _id: string;
+  name: string;
+  photo?: string;
+};
+
+type WrappedContact = {
+  _id: Contact;
+};
+
 interface RawMessage {
   _id: string
   text: string
-  sender: string // typically a user ID
-  createdAt: string // ISO timestamp
+  sender_id: string  // change from 'sender' to 'sender_id'
+  createdAt: string
 }
 
 interface Message {
   id: string
   text: string
-  sender: "client" | "lawyer"
+  senderId: string  // store the actual sender user id here
   timestamp: Date
 }
 
@@ -34,33 +45,38 @@ export default function ChatPage() {
   const [message, setMessage] = useState("")
   const [messagesByContact, setMessagesByContact] = useState<Record<string, Message[]>>({});
   const [searchQuery, setSearchQuery] = useState("")
-  const [contacts, setContacts] = useState<ChatContact[]>([]);
-  const { data: session } = useSession()
+  const [contacts, setContacts] = useState<ChatContact[]>([]);  const { data: session } = useSession()
   // Fetch chat users on load
   useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/v1/chat/users`, {
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`, // use appropriate auth
-          },
-        });
-        const data = await res.json();
-        console.log(data);
-        setContacts(data.users || []);
- // or adjust based on response format
-      } catch (err) {
-        console.error("Failed to fetch contacts:", err);
-      }
-    };
+  const fetchContacts = async () => {
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/chat/users`, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+      const data = await res.json();
+      console.log(data);
 
-    fetchContacts();
-  }, [session?.accessToken]);
+      const cleaned: ChatContact[] = (data as WrappedContact[]).map((item) => ({
+      id: item._id._id,
+      name: item._id.name,
+      photo: item._id.photo || "", // fallback if missing
+    }));
+
+    setContacts(cleaned);
+    } catch (err) {
+      console.error("Failed to fetch contacts:", err);
+    }
+  };
+
+  fetchContacts();
+}, [session?.accessToken]);
 
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedContact || !session?.accessToken) return;
-
+      console.log("SelectedContactID : ", selectedContact.id);
       try {
         const res = await fetch(`${backendUrl}/api/v1/chat/${selectedContact.id}`, {
           headers: {
@@ -69,13 +85,16 @@ export default function ChatPage() {
         });
 
         const data = await res.json();
+        console.log("Fetch messages : ", data);
 
-        const messages: Message[] = data.messages.map((m: RawMessage, index: number) => ({
-          id: m._id || `${m.sender}-${m.createdAt}-${index}`,
-          text: m.text,
-          sender: m.sender === session?.user?.id ? "client" : "lawyer",
-          timestamp: new Date(m.createdAt),
-        }));
+        const messages: Message[] = Array.isArray(data)
+        ? data.map((m: RawMessage, i: number) => ({
+            id: m._id ?? `${m.sender_id}-${m.createdAt}-${i}`,
+            text: m.text,
+            senderId: m.sender_id,    // <-- store actual sender ID here
+            timestamp: new Date(m.createdAt),
+          }))
+        : [];
 
         setMessagesByContact((prev) => ({
           ...prev,
@@ -97,9 +116,9 @@ export default function ChatPage() {
     if (!message.trim() || !selectedContact) return;
 
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: uuidv4(),
       text: message,
-      sender: "client",
+      senderId: session?.user?.id || "unknown",  // use the current user's ID here
       timestamp: new Date(),
     };
 
@@ -111,7 +130,7 @@ export default function ChatPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({
-          receiverId: selectedContact.id,
+          receiver_id: selectedContact.id,
           text: message,
         }),
       });
@@ -171,7 +190,7 @@ export default function ChatPage() {
             >
               <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold mr-3 relative overflow-hidden">
                 <Image
-                  src={`https://lawprojectdemo.s3.ap-southeat-1.amazonaws.com/${contact.photo}` || "/placeholder.svg"}
+                  src={contact.photo || "/img/default-avatar.jpg"}
                   alt={contact.name}
                   fill
                   unoptimized
@@ -196,7 +215,7 @@ export default function ChatPage() {
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold mr-3 relative overflow-hidden">
                   <Image
-                    src={`https://lawprojectdemo.s3.ap-southeast-1.amazonaws.com/${selectedContact.photo}` || "/placeholder.svg"}
+                    src={selectedContact.photo || "/img/default-avatar.jpg"}
                     alt={selectedContact.name}
                     fill
                     unoptimized
@@ -215,25 +234,36 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {(messagesByContact[selectedContact.id] || []).map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.sender === "client" ? "justify-end" : "justify-start"}`}>
+                  {(messagesByContact[selectedContact.id] || []).map((msg) => {
+                    const isCurrentUser = msg.senderId === session?.user?.id;
+                    console.log("msg.senderId:", msg.senderId, "session.user.id:", session?.user?.id, "isCurrentUser:", isCurrentUser);
+                    return (
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          msg.sender === "client"
-                            ? "bg-blue-500 text-white"
-                            : "bg-white text-gray-800 border border-gray-200"
-                        }`}
+                        key={msg.id}
+                        className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
                       >
-                        <p>{msg.text}</p>
-                        <p className={`text-xs mt-1 ${msg.sender === "client" ? "text-blue-100" : "text-gray-500"}`}>
-                          {msg.timestamp.toLocaleTimeString("th-TH", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            isCurrentUser
+                              ? "bg-blue-500 text-white"
+                              : "bg-white text-gray-800 border border-gray-200"
+                          }`}
+                        >
+                          <p>{msg.text}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              isCurrentUser ? "text-blue-100" : "text-gray-500"
+                            }`}
+                          >
+                            {msg.timestamp.toLocaleTimeString("th-TH", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
