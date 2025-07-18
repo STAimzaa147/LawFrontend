@@ -18,8 +18,11 @@ type ArticleItem = {
   category?: string[]
   view_count?: number
   like_count?: number
-  poster_name?: string // Added poster name
-  poster_photo?: string // Added poster photo URL
+  poster_id?: {
+    _id: string
+    name: string
+    photo?: string // optional if you plan to use a photo later
+  }
 }
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
@@ -30,8 +33,8 @@ async function getArticleById(id: string): Promise<ArticleItem | null> {
       cache: "no-store",
     })
     const data = await res.json()
+    console.log("Article Data : ", data)
     if (data.success) {
-      console.log("Article Data : ",data.data);
       return data.data
     }
   } catch (err) {
@@ -62,7 +65,7 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
   const session = await getServerSession(authOptions)
   console.log("check session", session?.accessToken)
 
-  if (!articleItem) return notFound()
+  if (!articleItem) return notFound() // [^1]
 
   // Check if user has liked this article item
   let initiallyLiked = false
@@ -78,44 +81,49 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
           <Link href="/articles">
             <button className="mb-4 bg-white text-black border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
-              ย้อนกลับไปที่บทความทั้งหมด
+              {"ย้อนกลับไปที่บทความทั้งหมด"}
             </button>
           </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* บทความหลัก */}
           <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
-            <div className="flex items-center gap-4 mb-4">
-              {" "}
-              {/* Flex container for poster info and title */}
-              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-300 flex items-center justify-center bg-gray-200">
-                <Image
-                  src={articleItem.poster_photo || "/placeholder-user.jpg"}
-                  alt={articleItem.poster_name || "Poster"}
-                  fill
-                  className="object-cover"
-                  sizes="48px" // Specify size for Next/Image optimization
-                />
-                {!articleItem.poster_photo && (
-                  <span className="text-gray-600 text-lg font-semibold">
-                    {articleItem.poster_name ? articleItem.poster_name.charAt(0).toUpperCase() : "UN"}
-                  </span>
-                )}
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-semibold">{articleItem.title}</h1>
-                {articleItem.poster_name && <p className="text-sm text-gray-600">โดย {articleItem.poster_name}</p>}
-              </div>
-            </div>
+            {/* Article Title moved here */}
+            <h1 className="text-2xl md:text-3xl font-semibold mb-4">{articleItem.title}</h1>
+            {/* Combined Poster Info and Post Date */}
             <div className="flex justify-between items-center text-xs text-gray-500 my-5 px-16">
-              <div>
-                เผยแพร่เมื่อ{" "}
-                <time dateTime={articleItem.createdAt}>
-                  {new Date(articleItem.createdAt).toLocaleString("th-TH", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </time>
+              <div className="flex items-center gap-4">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-300 flex items-center justify-center bg-gray-200">
+                  <Image
+                    src={articleItem.poster_id?.photo || "/img/default-avatar.jpg?height=48&width=48"}
+                    alt={articleItem.poster_id?.name || "Poster"}
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                  />
+                  {!articleItem.poster_id?.photo && (
+                    <span className="text-gray-600 text-lg font-semibold">
+                      {articleItem.poster_id?.name ? articleItem.poster_id.name.charAt(0).toUpperCase() : "UN"}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  {articleItem.poster_id?.name && (
+                    <p className="text-sm text-gray-600 font-medium">
+                      {"โดย "}
+                      {articleItem.poster_id.name}
+                    </p>
+                  )}
+                  <div className="text-xs text-gray-500">
+                    {"เผยแพร่เมื่อ "}{" "}
+                    <time dateTime={articleItem.createdAt}>
+                      {new Date(articleItem.createdAt).toLocaleString("th-TH", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </time>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-4">
                 {/* ปุ่มถูกใจ */}
@@ -182,9 +190,9 @@ async function OtherArticles({ currentId }: { currentId: string }) {
 
   return (
     <aside className="space-y-4">
-      <h3 className="text-white font-semibold text-lg mb-4">บทความที่เกี่ยวข้อง</h3>
+      <h3 className="text-white font-semibold text-lg mb-4">{"บทความที่เกี่ยวข้อง"}</h3>
       {otherArticles.length === 0 ? (
-        <div className="text-gray-300 italic">ไม่พบบทความที่เกี่ยวข้อง</div>
+        <div className="text-gray-300 italic">{"ไม่พบบทความที่เกี่ยวข้อง"}</div>
       ) : (
         otherArticles.map((item: ArticleItem) => (
           <Link
