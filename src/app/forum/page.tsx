@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { Search, Plus, MessageCircle, Heart, Eye, ChevronDown } from "lucide-react"
 import ForumPostMenu from "@/components/ForumPostMenu"
 import ShareButton from "@/components/ShareButton"
+import ReportForm from "@/components/ReportForm" // Import the new ReportForm component
 
 type ForumPost = {
   _id: string
@@ -35,6 +36,10 @@ export default function ForumPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState("")
+  // State for the ReportForm
+  const [isReportFormOpen, setIsReportFormOpen] = useState(false)
+  const [forumToReport, setForumToReport] = useState<ForumPost | null>(null)
 
   useEffect(() => {
     const fetchForums = async () => {
@@ -46,17 +51,17 @@ export default function ForumPage() {
         const data = await res.json()
         if (data.success) {
           setForums(data.data)
-          console.log("fetch forum data : ",data.data);
+          console.log("fetch forum data : ", data.data)
         }
-      } catch (error) {
-        console.error("Error fetching forums:", error)
+      }catch (error) {
+          console.error("Error fetching forums:", error)
+          setErrorMessage("ไม่สามารถโหลดกระทู้ได้ กรุณาลองใหม่.")
       } finally {
         setLoading(false)
       }
     }
-
     fetchForums()
-  }, [])
+  },[])
 
   // Extract unique categories from forums
   const categories = Array.from(new Set(forums.map((forum) => forum.category).filter(Boolean)))
@@ -67,9 +72,7 @@ export default function ForumPage() {
       forum.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       forum.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
       forum.category.toLowerCase().includes(searchTerm.toLowerCase())
-
     const matchesCategory = selectedCategory === "all" || forum.category === selectedCategory
-
     return matchesSearch && matchesCategory
   })
 
@@ -77,7 +80,7 @@ export default function ForumPage() {
     if (session?.user) {
       router.push("/forum/create")
     } else {
-      alert("You must be logged in to add a forum.")
+      setErrorMessage("กรุณาเข้าสู่ระบบก่อนตั้งกระทู้.")
       router.push("/api/auth/signin")
     }
   }
@@ -93,15 +96,15 @@ export default function ForumPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       })
-
       if (res.ok) {
         setForums((prev) => prev.filter((f) => f._id !== forumId))
       } else {
-        alert("Failed to delete forum.")
+        const errorData = await res.json()
+        setErrorMessage(errorData.message || "ลบกระทู้ไม่สำเร็จ.")
       }
     } catch (error) {
       console.error("Error deleting forum:", error)
-      alert("An error occurred while deleting the forum.")
+      setErrorMessage("เกิดข้อผิดพลาดขณะลบกระทู้.")
     }
   }
 
@@ -110,10 +113,55 @@ export default function ForumPage() {
     setIsDropdownOpen(false)
   }
 
+  // Function to open the report form
+  const handleOpenReportForm = (forum: ForumPost) => {
+    if (!session?.user) {
+      setErrorMessage("กรุณาเข้าสู่ระบบก่อนแจ้งรายงาน.")
+      router.push("/api/auth/signin")
+      return
+    }
+    setForumToReport(forum)
+    setIsReportFormOpen(true)
+  }
+
+  // Function to submit the report
+  const handleReportSubmit = async (reason: string, details: string) => {
+    if (!forumToReport) return // Should not happen if form is opened correctly
+
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/forum/${forumToReport._id}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify({ reason, details }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.message || "Failed to send report.")
+      }
+      // Success is handled by the ReportForm component's toast
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error sending report:", error.message)
+      } else {
+        console.error("Unknown error occurred")
+      }
+      throw error
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-800">
       {/* Main Content */}
       <main className="max-w-6xl mx-auto p-6">
+        {errorMessage && (
+          <div className="mx-auto max-w-4xl mb-6">
+            <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded p-3">{errorMessage}</p>
+          </div>
+        )}
         {/* Search, Category Filter, and Add Button */}
         <div className="flex gap-4 mb-8">
           <div className="relative flex-1">
@@ -126,7 +174,6 @@ export default function ForumPage() {
               className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-
           {/* Category Filter Dropdown */}
           <div className="relative">
             <button
@@ -136,7 +183,6 @@ export default function ForumPage() {
               {selectedCategory === "all" ? "ทุกหมวดหมู่" : selectedCategory}
               <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
             </button>
-
             {isDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
                 <div className="py-1">
@@ -163,7 +209,6 @@ export default function ForumPage() {
               </div>
             )}
           </div>
-
           <button
             onClick={handleAddForumClick}
             className="bg-white text-gray-700 px-6 py-3 rounded-full hover:bg-gray-50 transition flex items-center gap-2 font-medium shadow-sm border"
@@ -172,7 +217,6 @@ export default function ForumPage() {
             ตั้งกระทู้ใหม่
           </button>
         </div>
-
         {/* Active Filters Display */}
         {(selectedCategory !== "all" || searchTerm) && (
           <div className="mb-6 flex items-center gap-2 flex-wrap">
@@ -195,7 +239,6 @@ export default function ForumPage() {
             )}
           </div>
         )}
-
         {/* Forum Posts */}
         {loading ? (
           <div className="text-center mt-20 text-white">
@@ -205,7 +248,7 @@ export default function ForumPage() {
         ) : filteredForums.length === 0 ? (
           <div className="text-center mt-20">
             <p className="text-gray-400 text-lg">
-              {searchTerm || selectedCategory !== "all" ? "ไม่พบกระทู้ที���ตรงกับเงื่อนไขการค้นหา" : "ไม่พบกระทู้"}
+              {searchTerm || selectedCategory !== "all" ? "ไม่พบกระทู้ที่ตรงกับเงื่อนไขการค้นหา" : "ไม่พบกระทู้"}
             </p>
             {(searchTerm || selectedCategory !== "all") && (
               <button
@@ -226,12 +269,11 @@ export default function ForumPage() {
               พบ {filteredForums.length} กระทู้
               {selectedCategory !== "all" && ` ในหมวดหมู่ "${selectedCategory}"`}
             </div>
-
             {filteredForums.map((forum) => (
               <div key={forum._id} className="relative">
                 <div className="absolute top-4 right-4 z-10">
                   <ForumPostMenu
-                    onReport={() => alert("Reported!")}
+                    onReport={() => handleOpenReportForm(forum)} // Changed to open report form
                     onEdit={() => router.push(`/forum/${forum._id}/edit`)}
                     onDelete={() => handleDeleteForum(forum._id)}
                     isOwner={session?.user?.id === forum.poster_id._id}
@@ -253,7 +295,6 @@ export default function ForumPage() {
                           />
                         </div>
                       )}
-
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         {/* Category Badge */}
@@ -262,16 +303,14 @@ export default function ForumPage() {
                             {forum.category}
                           </span>
                         </div>
-
                         <h2 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">{forum.title}</h2>
                         <p className="text-gray-600 text-sm line-clamp-2 mb-4">{forum.content}</p>
-
                         {/* Author and Date */}
                         <div className="flex items-center gap-3 mb-4">
                           {forum.poster_id?.photo ? (
                             <div className="w-8 h-8 rounded-full overflow-hidden">
                               <Image
-                                src={forum.poster_id.photo}
+                                src={forum.poster_id.photo || "/placeholder.svg"}
                                 alt={forum.poster_id.name || "Author"}
                                 width={32}
                                 height={32}
@@ -288,7 +327,6 @@ export default function ForumPage() {
                           )}
                           <span className="text-sm text-gray-600">{forum.poster_id?.name || "Unknown"}</span>
                         </div>
-
                         {/* Actions and Date */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-6">
@@ -324,9 +362,21 @@ export default function ForumPage() {
           </div>
         )}
       </main>
-
       {/* Click outside to close dropdown */}
       {isDropdownOpen && <div className="fixed inset-0 z-10" onClick={() => setIsDropdownOpen(false)} />}
+
+      {/* Report Form Dialog */}
+      {forumToReport && (
+        <ReportForm
+          isOpen={isReportFormOpen}
+          onClose={() => {
+            setIsReportFormOpen(false)
+            setForumToReport(null)
+          }}
+          onSubmit={handleReportSubmit}
+          forumTitle={forumToReport.title}
+        />
+      )}
     </div>
   )
 }

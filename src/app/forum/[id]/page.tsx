@@ -11,6 +11,8 @@ import ForumPostMenu from "@/components/ForumPostMenu"
 import LikeButton from "@/components/LikeButton"
 import { Eye, Heart } from "lucide-react"
 import ShareButton from "@/components/ShareButton"
+import ReportForm from "@/components/ReportForm"
+import ReportComment from "@/components/ReportComment"
 
 type ForumPost = {
   _id: string
@@ -47,6 +49,9 @@ export default function ForumPage({ params }: { params: { id: string } }) {
   const [recommendedForums, setRecommendedForums] = useState<ForumPost[]>([])
   const [initiallyLiked, setInitiallyLiked] = useState(false)
   const [likeCheckLoading, setLikeCheckLoading] = useState(true)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [reportCommentModalOpen, setReportCommentModalOpen] = useState(false)
+  const [commentToReport, setCommentToReport] = useState<Comment | null>(null)
 
   useEffect(() => {
     if (showCommentBox && commentInputRef.current) {
@@ -183,6 +188,62 @@ export default function ForumPage({ params }: { params: { id: string } }) {
     }
   }
 
+  const handleReportSubmit = async (reason: string, details: string) => {
+    if (!session) {
+      alert("กรุณาเข้าสู่ระบบก่อนรายงาน")
+      router.push("/api/auth/signin")
+      return
+    }
+
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/forum/${forum?._id}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ reason, details }),
+      })
+
+      if (!res.ok) throw new Error("Failed to report")
+
+      alert("รายงานถูกส่งเรียบร้อย ขอบคุณที่แจ้งให้เราทราบ")
+    } catch (error) {
+      console.error("Report error:", error)
+      alert("ส่งรายงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง")
+    }
+  }
+
+  const handleReportCommentSubmit = async (commentId: string, reason: string, details: string) => {
+  if (!session) {
+    alert("กรุณาเข้าสู่ระบบก่อนรายงาน")
+    router.push("/api/auth/signin")
+    return
+  }
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/comment/${commentId}/report`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify({ reason, details }),
+    })
+
+    if (!res.ok) {
+      const errorData = await res.json()
+      throw new Error(errorData.message || "Failed to send comment report.")
+    }
+
+    alert("ส่งรายงานความคิดเห็นเรียบร้อยแล้ว")
+  } catch (error) {
+    console.error("Failed to report comment:", error)
+    alert("เกิดข้อผิดพลาดในการส่งรายงานความคิดเห็น")
+  }
+}
+
+
   if (!forum) return <p className="text-center p-6 my-10">Loading...</p>
 
   const filteredRecommended = recommendedForums.filter((rec) => rec._id !== forum._id)
@@ -219,7 +280,7 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                   alert("An error occurred while deleting the forum post.")
                 }
               }}
-              onReport={() => alert("Reported!")}
+              onReport={() => setReportModalOpen(true)}
             />
           </div>
           <h1 className="text-3xl text-black font-bold mb-4">{forum.title}</h1>
@@ -328,8 +389,16 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                       isOwner={session?.user?.id === comment.user_id._id}
                       onEdit={() => handleEdit(comment)}
                       onDelete={() => handleDelete(comment._id)}
-                      onReport={() => alert("Reported comment!")}
-                    />
+                      onReport={() => {
+                          if (!session) {
+                            alert("กรุณาเข้าสู่ระบบก่อนแจ้งรายงาน")
+                            router.push("/api/auth/signin")
+                            return
+                          }
+                          setCommentToReport(comment)
+                          setReportCommentModalOpen(true)
+                        }}     
+                     />
                   </div>
                 </li>
                 ) : null,
@@ -415,6 +484,27 @@ export default function ForumPage({ params }: { params: { id: string } }) {
           </ul>
         )}
       </div>
+      <ReportForm
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        onSubmit={async (reason, details) => {
+          await handleReportSubmit(reason, details)
+          setReportModalOpen(false)
+        }}
+        forumTitle={forum?.title || ""}
+      />
+      {commentToReport && (
+        <ReportComment
+          isOpen={reportCommentModalOpen}
+          onClose={() => {
+            setReportCommentModalOpen(false);
+            setCommentToReport(null);
+          }}
+          onSubmit={handleReportCommentSubmit}
+          commentContent={commentToReport.content}
+          commentId={commentToReport._id} // <-- Add this line
+        />
+      )}
     </>
   )
 }
