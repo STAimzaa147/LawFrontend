@@ -6,6 +6,7 @@ import { Eye, Heart, ArrowLeft } from "lucide-react"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions"
 import Link from "next/link"
+// Removed: import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 type ArticleItem = {
   _id: string
@@ -17,6 +18,8 @@ type ArticleItem = {
   category?: string[]
   view_count?: number
   like_count?: number
+  poster_name?: string // Added poster name
+  poster_photo?: string // Added poster photo URL
 }
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
@@ -28,6 +31,7 @@ async function getArticleById(id: string): Promise<ArticleItem | null> {
     })
     const data = await res.json()
     if (data.success) {
+      console.log("Article Data : ",data.data);
       return data.data
     }
   } catch (err) {
@@ -56,7 +60,6 @@ async function checkIfArticleLiked(articleId: string, accessToken: string): Prom
 export default async function ArticleDetailPage({ params }: { params: { id: string } }) {
   const articleItem = await getArticleById(params.id)
   const session = await getServerSession(authOptions)
-
   console.log("check session", session?.accessToken)
 
   if (!articleItem) return notFound()
@@ -79,12 +82,31 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
             </button>
           </Link>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* บทความหลัก */}
           <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
-            <h1 className="text-2xl md:text-3xl font-semibold mb-4 ml-14">{articleItem.title}</h1>
-
+            <div className="flex items-center gap-4 mb-4">
+              {" "}
+              {/* Flex container for poster info and title */}
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-300 flex items-center justify-center bg-gray-200">
+                <Image
+                  src={articleItem.poster_photo || "/placeholder-user.jpg"}
+                  alt={articleItem.poster_name || "Poster"}
+                  fill
+                  className="object-cover"
+                  sizes="48px" // Specify size for Next/Image optimization
+                />
+                {!articleItem.poster_photo && (
+                  <span className="text-gray-600 text-lg font-semibold">
+                    {articleItem.poster_name ? articleItem.poster_name.charAt(0).toUpperCase() : "UN"}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-semibold">{articleItem.title}</h1>
+                {articleItem.poster_name && <p className="text-sm text-gray-600">โดย {articleItem.poster_name}</p>}
+              </div>
+            </div>
             <div className="flex justify-between items-center text-xs text-gray-500 my-5 px-16">
               <div>
                 เผยแพร่เมื่อ{" "}
@@ -95,7 +117,6 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                   })}
                 </time>
               </div>
-
               <div className="flex items-center gap-4">
                 {/* ปุ่มถูกใจ */}
                 {session ? (
@@ -110,10 +131,8 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                     <span className="text-gray-600">{articleItem.like_count || 0}</span>
                   </div>
                 )}
-
                 {/* ปุ่มแชร์ */}
                 <ShareButton />
-
                 {/* จำนวนการเข้าชม */}
                 <div className="flex items-center gap-1">
                   <Eye className="w-4 h-4 text-gray-600" />
@@ -121,7 +140,6 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                 </div>
               </div>
             </div>
-
             <div
               className="relative w-full max-w-2xl h-80 mx-auto rounded-2xl overflow-hidden mb-12"
               style={{ paddingTop: "56.25%" }}
@@ -135,21 +153,16 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                 sizes="(max-width: 768px) 100vw, 1024px"
               />
             </div>
-
             <p className="text-sm text-gray-700 whitespace-pre-line px-16">{articleItem.content}</p>
-
             {/* แสดงหมวดหมู่ */}
             {articleItem.category && (
               <div className="mt-14 px-16">
                 <span className="bg-gray-200 text-black px-3 py-1 rounded-3xl text-sm font-medium">
-                  {Array.isArray(articleItem.category)
-                    ? articleItem.category.join(", ")
-                    : articleItem.category}
+                  {Array.isArray(articleItem.category) ? articleItem.category.join(", ") : articleItem.category}
                 </span>
               </div>
             )}
           </section>
-
           {/* แถบด้านข้าง */}
           <OtherArticles currentId={articleItem._id} />
         </div>
@@ -164,50 +177,44 @@ async function OtherArticles({ currentId }: { currentId: string }) {
     cache: "no-store",
   })
   const data = await res.json()
-
   if (!data.success) return null
-
   const otherArticles: ArticleItem[] = data.data.filter((item: ArticleItem) => item._id !== currentId).slice(0, 5)
 
   return (
     <aside className="space-y-4">
-    <h3 className="text-white font-semibold text-lg mb-4">บทความที่เกี่ยวข้อง</h3>
-
-    {otherArticles.length === 0 ? (
-      <div className="text-gray-300 italic">ไม่พบบทความที่เกี่ยวข้อง</div>
-    ) : (
-      otherArticles.map((item: ArticleItem) => (
-        <Link
-          key={item._id}
-          href={`/articles/${item._id}`}
-          className="flex flex-col bg-white/80 text-black rounded-lg shadow-md hover:bg-gray-100 transition min-h-[100px]"
-        >
-          <div className="flex items-center">
-            <Image
-              src={item.image || "/placeholder.svg"}
-              alt={item.title}
-              width={120}
-              height={90}
-              unoptimized
-              className="object-cover rounded-l-lg w-[180px] h-[120px]"
-            />
-            <div className="flex flex-col flex-grow px-4">
-              <span className="text-base font-medium">{item.title}</span>
-              <div className="border-t border-black mt-1" />
-              <time
-                dateTime={item.createdAt}
-                className="text-right text-xs text-gray-600 mt-2"
-              >
-                {new Date(item.createdAt).toLocaleString("th-TH", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </time>
+      <h3 className="text-white font-semibold text-lg mb-4">บทความที่เกี่ยวข้อง</h3>
+      {otherArticles.length === 0 ? (
+        <div className="text-gray-300 italic">ไม่พบบทความที่เกี่ยวข้อง</div>
+      ) : (
+        otherArticles.map((item: ArticleItem) => (
+          <Link
+            key={item._id}
+            href={`/articles/${item._id}`}
+            className="flex flex-col bg-white/80 text-black rounded-lg shadow-md hover:bg-gray-100 transition min-h-[100px]"
+          >
+            <div className="flex items-center">
+              <Image
+                src={item.image || "/placeholder.svg"}
+                alt={item.title}
+                width={120}
+                height={90}
+                unoptimized
+                className="object-cover rounded-l-lg w-[180px] h-[120px]"
+              />
+              <div className="flex flex-col flex-grow px-4">
+                <span className="text-base font-medium">{item.title}</span>
+                <div className="border-t border-black mt-1" />
+                <time dateTime={item.createdAt} className="text-right text-xs text-gray-600 mt-2">
+                  {new Date(item.createdAt).toLocaleString("th-TH", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </time>
+              </div>
             </div>
-          </div>
-        </Link>
-      ))
-    )}
-  </aside>
+          </Link>
+        ))
+      )}
+    </aside>
   )
 }

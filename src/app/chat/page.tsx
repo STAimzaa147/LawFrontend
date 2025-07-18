@@ -2,14 +2,22 @@
 
 import type React from "react"
 import Image from "next/image"
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import { Search, Plus, ArrowUp } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 interface ChatContact {
   id: string
   name: string
-  avatar: string
+  photo: string
   lastMessage?: string
+}
+
+interface RawMessage {
+  _id: string
+  text: string
+  sender: string // typically a user ID
+  createdAt: string // ISO timestamp
 }
 
 interface Message {
@@ -19,39 +27,107 @@ interface Message {
   timestamp: Date
 }
 
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+
 export default function ChatPage() {
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null)
   const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messagesByContact, setMessagesByContact] = useState<Record<string, Message[]>>({});
   const [searchQuery, setSearchQuery] = useState("")
-
-  const contacts: ChatContact[] = [
-    {
-      id: "1",
-      name: "ก ภาษา ก",
-      avatar: "/placeholder.svg?height=40&width=40&text=ก",
-    },
-    {
-      id: "2",
-      name: "ย ภาษา ย",
-      avatar: "/placeholder.svg?height=40&width=40&text=ย",
-    },
-  ]
-
-  const filteredContacts = contacts.filter((contact) => contact.name.toLowerCase().includes(searchQuery.toLowerCase()))
-
-  const handleSendMessage = () => {
-    if (message.trim() && selectedContact) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: message,
-        sender: "client",
-        timestamp: new Date(),
+  const [contacts, setContacts] = useState<ChatContact[]>([]);
+  const { data: session } = useSession()
+  // Fetch chat users on load
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/v1/chat/users`, {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`, // use appropriate auth
+          },
+        });
+        const data = await res.json();
+        console.log(data);
+        setContacts(data.users || []);
+ // or adjust based on response format
+      } catch (err) {
+        console.error("Failed to fetch contacts:", err);
       }
-      setMessages((prev) => [...prev, newMessage])
-      setMessage("")
+    };
+
+    fetchContacts();
+  }, [session?.accessToken]);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedContact || !session?.accessToken) return;
+
+      try {
+        const res = await fetch(`${backendUrl}/api/v1/chat/${selectedContact.id}`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+
+        const data = await res.json();
+
+        const messages: Message[] = data.messages.map((m: RawMessage, index: number) => ({
+          id: m._id || `${m.sender}-${m.createdAt}-${index}`,
+          text: m.text,
+          sender: m.sender === session?.user?.id ? "client" : "lawyer",
+          timestamp: new Date(m.createdAt),
+        }));
+
+        setMessagesByContact((prev) => ({
+          ...prev,
+          [selectedContact.id]: messages,
+        }));
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedContact, session?.accessToken, session?.user?.id]);
+
+  const filteredContacts = (contacts ?? []).filter((contact) =>
+    contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ); 
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !selectedContact) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: message,
+      sender: "client",
+      timestamp: new Date(),
+    };
+
+    try {
+      await fetch(`${backendUrl}/api/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify({
+          receiverId: selectedContact.id,
+          text: message,
+        }),
+      });
+
+      setMessagesByContact((prev) => {
+        const currentMessages = prev[selectedContact.id] || [];
+        return {
+          ...prev,
+          [selectedContact.id]: [...currentMessages, newMessage],
+        };
+      });
+      setMessage("");
+    } catch (err) {
+      console.error("Failed to send message:", err);
     }
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -95,7 +171,7 @@ export default function ChatPage() {
             >
               <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold mr-3 relative overflow-hidden">
                 <Image
-                  src={contact.avatar || "/placeholder.svg"}
+                  src={`https://lawprojectdemo.s3.ap-southeat-1.amazonaws.com/${contact.photo}` || "/placeholder.svg"}
                   alt={contact.name}
                   fill
                   unoptimized
@@ -120,7 +196,7 @@ export default function ChatPage() {
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold mr-3 relative overflow-hidden">
                   <Image
-                    src={selectedContact.avatar || "/placeholder.svg"}
+                    src={`https://lawprojectdemo.s3.ap-southeast-1.amazonaws.com/${selectedContact.photo}` || "/placeholder.svg"}
                     alt={selectedContact.name}
                     fill
                     unoptimized
@@ -133,13 +209,13 @@ export default function ChatPage() {
 
             {/* Messages Area */}
             <div className="flex-1 bg-gray-50 p-6 overflow-y-auto">
-              {messages.length === 0 ? (
+              {(messagesByContact[selectedContact.id] || []).length === 0 ? (
                 <div className="flex items-center justify-center h-full text-gray-500">
                   <p>เริ่มต้นการสนทนาของคุณ</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {messages.map((msg) => (
+                  {(messagesByContact[selectedContact.id] || []).map((msg) => (
                     <div key={msg.id} className={`flex ${msg.sender === "client" ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
@@ -175,7 +251,7 @@ export default function ChatPage() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 text-black border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <button

@@ -242,6 +242,32 @@ export default function LawyerProfilePage() {
     }
   }
 
+  const handleClick = async () => {
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+        body: JSON.stringify({
+          receiver_id: lawyer._id._id, // or just lawyer._id depending on your data shape
+          text:"ผมต้องการขอคำปรึกษาครับ/ค่ะ",
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to create chat");
+        return;
+      }
+
+      // Redirect to chat page
+      router.push(`/chat`);
+    } catch (err) {
+      console.error("Error starting chat:", err);
+    }
+  };
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
@@ -301,7 +327,10 @@ export default function LawyerProfilePage() {
                       ))}
                   </div>
                   {/* Contact Button */}
-                  <button className="bg-slate-700 text-white px-8 py-3 rounded-full font-medium hover:bg-slate-800 transition-all duration-200 shadow-md hover:shadow-lg">
+                  <button
+                    onClick={handleClick}
+                    className="bg-slate-700 text-white px-8 py-3 rounded-full font-medium hover:bg-slate-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
                     ติดต่อทนาย
                   </button>
                 </div>

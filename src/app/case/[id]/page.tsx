@@ -52,6 +52,7 @@ type CaseDetails = {
   consultation_date?: string
   consultation_status: "pending" | "cancelled" | "confirmed" | "rejected"
   note: string
+  summons? : string
   files?: string[]
   createdAt: string
   updatedAt: string
@@ -501,7 +502,7 @@ const handleReject = async () => {
                   className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  {deleteLoading ? "กำลังลบ..." : "ลบ"}
+                  {deleteLoading ? "กำลังยกเลิกคดี..." : "ลบ"}
                 </button>
               </div>
             )}
@@ -605,12 +606,123 @@ const handleReject = async () => {
               </div>
             </div>
 
+            {/* Summons File Section - Only 1 File Allowed */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  หมายเรียก ({caseData.summons ? 1 : 0})
+                </h3>
+                {isOwner && !caseData.summons && (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                      disabled={uploadLoading}
+                    />
+                    <button
+                      disabled={uploadLoading}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                    >
+                      {uploadLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                          กำลังอัปโหลด...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          อัปโหลดหมายเรียก
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {caseData.summons ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex-shrink-0">{getFileIcon(caseData.summons)}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate" title={caseData.summons}>
+                          {caseData.summons}
+                        </p>
+                      </div>
+                    </div>
+                    {caseData.summons && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleFileDownload(caseData.summons!, extractFilename(caseData.summons!))}
+                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors px-3 py-2 hover:bg-blue-50 rounded-md"
+                          title="ดาวน์โหลดไฟล์"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span className="text-sm">ดาวน์โหลด</span>
+                        </button>
+                        {isOwner && (
+                          <button
+                            onClick={() => handleFileDelete(0, caseData.summons!)}
+                            disabled={deletingFileIndex === 0}
+                            className="flex items-center gap-2 text-red-600 hover:text-red-800 transition-colors px-3 py-2 hover:bg-red-50 rounded-md disabled:opacity-50"
+                            title="ลบไฟล์"
+                          >
+                            {deletingFileIndex === 0 ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-red-600"></div>
+                            ) : (
+                              <X className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg mb-2">ยังไม่มีหมายเรียก</p>
+                  <p className="text-gray-400 text-sm mb-4">อัปโหลดหมายเรียกที่เกี่ยวข้องกับคดีนี้</p>
+                  {isOwner && (
+                    <div className="relative inline-block">
+                      <input
+                        type="file"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                        disabled={uploadLoading}
+                      />
+                      <button
+                        disabled={uploadLoading}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {uploadLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
+                            กำลังอัปโหลด...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-5 h-5" />
+                            อัปโหลดหมายเรียก
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Files Section - Always show */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
-                  เอกสารประกอบ ({caseData.files?.length || 0})
+                  เอกสารที่เกี่ยวข้อง ({caseData.files?.length || 0})
                 </h3>
                 {isOwner && (
                   <div className="relative">

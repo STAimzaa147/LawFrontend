@@ -143,18 +143,18 @@ export default function CreateCasePage() {
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || [])
-    const maxSize = 10 * 1024 * 1024 // 10MB
-    const validFiles = selectedFiles.filter((file) => {
-      if (file.size > maxSize) {
-        setError(`File "${file.name}" is too large. Maximum size is 10MB.`)
-        return false
-      }
-      return true
-    })
-    setFiles((prev) => [...prev, ...validFiles])
-    e.target.value = ""
+  const selectedFile = e.target.files?.[0];
+  const maxSize = 10 * 1024 * 1024; // 10MB
+
+  if (selectedFile) {
+    if (selectedFile.size > maxSize) {
+      setError(`File "${selectedFile.name}" is too large. Maximum size is 10MB.`);
+    } else {
+      setFiles([selectedFile]); // 👈 Only one file
+    }
   }
+  e.target.value = "";
+};
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index))
@@ -287,75 +287,87 @@ export default function CreateCasePage() {
   }
 
   const handleConsultationSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setConsultationLoading(true)
-    setError("")
-    console.log("Case With Lawyer Created")
+  e.preventDefault();
+  setConsultationLoading(true);
+  setError("");
+  console.log("Case With Lawyer Created");
 
-    try {
-      const consultationData = {
-        offered_Lawyers: selectedLawyers,
-        category_type: formData.category_type,
-        description: formData.description,
-        note: formData.note,
-        dateMode: dateSelectionMode,
-        selectedDate: dateSelectionMode === "exact" ? selectedDate : null,
-        dateRange: dateSelectionMode === "range" ? { startDate, endDate } : null,
-        selectedTime,
-        details: consultationDetails,
-        clientId: session?.user?.id,
-      }
+  try {
+    const form = new FormData();
 
-      console.log("Sending consultation data:", consultationData)
+    // Append text fields
+    form.append("category_type", formData.category_type);
+    form.append("description", formData.description);
+    form.append("note", formData.note);
+    form.append("dateMode", dateSelectionMode);
+    form.append("clientId", session?.user?.id || "");
 
-      const res = await fetch(`${backendUrl}/api/v1/caseRequest`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(consultationData),
-      })
-
-      const result = await res.json()
-
-      if (result.success) {
-        // Close the modal
-        setIsConsultationModalOpen(false)
-
-        // Reset form
-        setSelectedLawyers([])
-        setConsultationDetails("")
-        setSelectedDate(null)
-        setStartDate(null)
-        setEndDate(null)
-        setSelectedTime(null)
-
-        alert("ส่งคำขอปรึกษาเรียบร้อยแล้ว ทนายความจะติดต่อกลับภายใน 24 ชั่วโมง")
-
-        // ✅ DON'T CALL createCase() AGAIN — this would duplicate the case
-        // You already created the case with lawyers via consultationData
-
-        // ✅ Optional: Redirect
-        const returnUrl = localStorage.getItem("caseCreateReturnUrl")
-        if (returnUrl) {
-          localStorage.removeItem("caseCreateReturnUrl")
-          const separator = returnUrl.includes("?") ? "&" : "?"
-          router.push(`${returnUrl}${separator}caseCreated=true`)
-        } else {
-          router.push("/case")
-        }
-      } else {
-        console.error("Consultation request failed:", result)
-        setError("ไม่สามารถส่งคำขอปรึกษาได้ กรุณาลองใหม่อีกครั้ง")
-      }
-    } catch (error) {
-      console.error("Error sending consultation request:", error)
-      setError("เกิดข้อผิดพลาดในการส่งคำขอปรึกษา")
-    } finally {
-      setConsultationLoading(false)
+    if (dateSelectionMode === "exact" && selectedDate) {
+      form.append("selectedDate", selectedDate.toISOString());
     }
+
+    if (dateSelectionMode === "range" && startDate && endDate) {
+      form.append("startDate", startDate.toISOString());
+      form.append("endDate", endDate.toISOString());
+    }
+
+    if (selectedTime) {
+      form.append("selectedTime", selectedTime.toISOString());
+    }
+
+    form.append("details", consultationDetails);
+
+    // Append offered lawyers (array)
+    selectedLawyers.forEach((lawyerId, index) => {
+      form.append(`offered_Lawyers[${index}]`, lawyerId);
+    });
+
+    // Append the summons file
+    if (files.length > 0) {
+      form.append("file", files[0]); // ⬅️ this must match backend's upload.single("file")
+    }
+
+    const res = await fetch(`${backendUrl}/api/v1/caseRequest`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+        // ⛔ DO NOT set Content-Type manually (browser will set boundary automatically)
+      },
+      body: form,
+    });
+
+    const result = await res.json();
+
+    if (result.success) {
+      setIsConsultationModalOpen(false);
+      setSelectedLawyers([]);
+      setConsultationDetails("");
+      setSelectedDate(null);
+      setStartDate(null);
+      setEndDate(null);
+      setSelectedTime(null);
+
+      alert("ส่งคำขอปรึกษาเรียบร้อยแล้ว ทนายความจะติดต่อกลับภายใน 24 ชั่วโมง");
+
+      const returnUrl = localStorage.getItem("caseCreateReturnUrl");
+      if (returnUrl) {
+        localStorage.removeItem("caseCreateReturnUrl");
+        const separator = returnUrl.includes("?") ? "&" : "?";
+        router.push(`${returnUrl}${separator}caseCreated=true`);
+      } else {
+        router.push("/case");
+      }
+    } else {
+      console.error("Consultation request failed:", result);
+      setError("ไม่สามารถส่งคำขอปรึกษาได้ กรุณาลองใหม่อีกครั้ง");
+    }
+  } catch (error) {
+    console.error("Error sending consultation request:", error);
+    setError("เกิดข้อผิดพลาดในการส่งคำขอปรึกษา");
+  } finally {
+    setConsultationLoading(false);
   }
+};
 
   const isToday = (date: Date) => {
     const today = new Date()
@@ -478,30 +490,6 @@ export default function CreateCasePage() {
                   <span className="text-xs text-gray-500">PDF, DOC, DOCX, TXT, JPG, PNG, GIF (สูงสุด 10MB ต่อไฟล์)</span>
                 </label>
               </div>
-            </div>
-
-            {/* File Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Upload className="w-4 h-4 inline mr-2" />
-                เอกสารแนบ (ถ้ามี)
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
-                  <Upload className="w-8 h-8 text-gray-400" />
-                  <span className="text-sm text-gray-600">คลิกเพื่ออัปโหลดไฟล์ หรือ ลากไฟล์มาวางที่นี่</span>
-                  <span className="text-xs text-gray-500">PDF, DOC, DOCX, TXT, JPG, PNG, GIF (สูงสุด 10MB ต่อไฟล์)</span>
-                </label>
-              </div>
-
               {files.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <h4 className="text-sm font-medium text-gray-700">ไฟล์ที่เลือก:</h4>
@@ -526,7 +514,7 @@ export default function CreateCasePage() {
                 </div>
               )}
             </div>
-
+            
             {/* Notes */}
             <div>
               <label htmlFor="note" className="block text-sm font-medium text-gray-700 mb-2">

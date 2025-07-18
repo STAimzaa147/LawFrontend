@@ -140,68 +140,94 @@ const getEndTimeMin = () => {
     }, [session, backendUrl, fetchUserCases])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  e.preventDefault()
+  setLoading(true)
 
-    try {
-        const token = session?.accessToken
-        const userRole = session?.user?.role
-        const selectedCase = userCases.find((c) => c._id === selectedCaseId)
+  try {
+    const token = session?.accessToken
+    const userRole = session?.user?.role
+    const selectedCase = userCases.find((c) => c._id === selectedCaseId)
 
-        if (!selectedCase) {
-        throw new Error("No case selected")
-        }
+    if (!selectedCase) {
+      throw new Error("No case selected")
+    }
 
-        const caseClientId = selectedCase.client_id
-        const caseLawyerId = selectedCase.lawyer_id
+    const caseClientId = selectedCase.client_id
+    const caseLawyerId = selectedCase.lawyer_id
 
-        const dateOnly = new Date(formData.date)
-        if (!startTime) throw new Error("Start time is required")
+    const dateOnly = new Date(formData.date)
+    if (!startTime) throw new Error("Start time is required")
 
-        const timestamp = new Date(
-        dateOnly.getFullYear(),
-        dateOnly.getMonth(),
-        dateOnly.getDate(),
-        startTime.getHours(),
-        startTime.getMinutes()
-        )
+    const timestamp = new Date(
+      dateOnly.getFullYear(),
+      dateOnly.getMonth(),
+      dateOnly.getDate(),
+      startTime.getHours(),
+      startTime.getMinutes()
+    )
 
-        const appointmentData = {
-        case_id: selectedCaseId,
-        client_id: caseClientId,
-        lawyer_id: caseLawyerId,
-        timeStamp: timestamp.toISOString(),
-        task: formData.task,
-        location: formData.location,
-        note: formData.note,
-        permission: formData.permission,
-        status: "confirmed",
-        }
-        console.log(appointmentData);
-        const response = await fetch(`${backendUrl}/api/v1/appointment/create/${selectedCaseId}`, {
+    const appointmentData = {
+      case_id: selectedCaseId,
+      client_id: caseClientId,
+      lawyer_id: caseLawyerId,
+      timeStamp: timestamp.toISOString(),
+      task: formData.task,
+      location: formData.location,
+      note: formData.note,
+      permission: formData.permission,
+      status: "confirmed",
+    }
+
+    // 📌 Step 1: Save to your backend
+    const response = await fetch(`${backendUrl}/api/v1/appointment/create/${selectedCaseId}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(appointmentData),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to create appointment")
+    }
+
+    // 📌 Step 2: Sync to Google Calendar
+    if (token) {
+      await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(appointmentData),
-        })
-
-        if (!response.ok) {
-        throw new Error("Failed to create appointment")
-        }
-
-        // Use caseClientId or caseLawyerId to refresh calendar properly
-        const refreshId = userRole === "lawyer" ? caseLawyerId : caseClientId
-        onSave(refreshId || "")
-        onClose()
-    } catch (error) {
-        console.error("Error creating appointment:", error)
-        alert("เกิดข้อผิดพลาดในการสร้างนัดหมาย")
-    } finally {
-        setLoading(false)
+        body: JSON.stringify({
+          summary: formData.task,
+          description: formData.note || "",
+          location: formData.location,
+          start: {
+            dateTime: timestamp.toISOString(),
+            timeZone: "Asia/Bangkok",
+          },
+          end: {
+            dateTime: new Date(timestamp.getTime() + 60 * 60 * 1000).toISOString(), // 1 hour later
+            timeZone: "Asia/Bangkok",
+          },
+        }),
+      })
     }
-    }
+
+    // 📌 Step 3: Refresh calendar
+    const refreshId = userRole === "lawyer" ? caseLawyerId : caseClientId
+    onSave(refreshId || "")
+    onClose()
+  } catch (error) {
+    console.error("Error creating appointment:", error)
+    alert("เกิดข้อผิดพลาดในการสร้างนัดหมาย")
+  } finally {
+    setLoading(false)
+  }
+}
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8"
