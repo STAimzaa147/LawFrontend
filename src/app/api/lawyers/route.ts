@@ -36,29 +36,31 @@ export async function GET(request: NextRequest) {
 
   try {
     let response
-    const headers = {
+
+    // 👇 Extract Authorization header from the incoming request
+    const authHeader = request.headers.get("authorization")
+
+    const headers: HeadersInit = {
       "Content-Type": "application/json",
     }
 
+    // 👇 Attach the Authorization header if present
+    if (authHeader) {
+      headers["Authorization"] = authHeader
+    }
+
     if (min || max) {
-      // Fetch from protected /price route
       const query = new URLSearchParams()
-      console.log("query : ", query);
       if (min) query.append("min", min)
       if (max) query.append("max", max)
 
       response = await fetch(`${backendUrl}/api/v1/lawyer/price?${query.toString()}`, {
         headers,
       })
-      console.log("filter by price : ",response);
-      console.log("min : ",min);
-      console.log("max price : ",max);
     } else {
-      // Fetch all lawyers
       response = await fetch(`${backendUrl}/api/v1/lawyer`, {
         headers,
       })
-      console.log("normal filter : ",response);
     }
 
     if (!response.ok) {
@@ -68,7 +70,6 @@ export async function GET(request: NextRequest) {
     const res = await response.json()
     const lawyers = res.data || res
 
-    // Always apply keyword filtering after price filtering
     const filteredLawyers = lawyers.filter((lawyer: Lawyer) => {
       return (
         lawyer.slogan?.toLowerCase().includes(search) ||
