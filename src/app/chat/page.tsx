@@ -2,7 +2,7 @@
 
 import type React from "react"
 import Image from "next/image"
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Search, Plus, ArrowUp } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { v4 as uuidv4 } from 'uuid';
@@ -27,14 +27,14 @@ type WrappedContact = {
 interface RawMessage {
   _id: string
   text: string
-  sender_id: string  // change from 'sender' to 'sender_id'
+  sender_id: string
   createdAt: string
 }
 
 interface Message {
   id: string
   text: string
-  senderId: string  // store the actual sender user id here
+  senderId: string
   timestamp: Date
 }
 
@@ -45,38 +45,38 @@ export default function ChatPage() {
   const [message, setMessage] = useState("")
   const [messagesByContact, setMessagesByContact] = useState<Record<string, Message[]>>({});
   const [searchQuery, setSearchQuery] = useState("")
-  const [contacts, setContacts] = useState<ChatContact[]>([]);  const { data: session } = useSession()
+  const [contacts, setContacts] = useState<ChatContact[]>([])
+  const { data: session } = useSession()
+
   // Fetch chat users on load
   useEffect(() => {
-  const fetchContacts = async () => {
-    try {
-      const res = await fetch(`${backendUrl}/api/v1/chat/users`, {
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-      const data = await res.json();
-      console.log(data);
+    const fetchContacts = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/v1/chat/users`, {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        });
+        const data = await res.json();
+        const cleaned: ChatContact[] = (data as WrappedContact[]).map((item) => ({
+          id: item._id._id,
+          name: item._id.name,
+          photo: item._id.photo || "",
+        }));
+        setContacts(cleaned);
+      } catch (err) {
+        console.error("Failed to fetch contacts:", err);
+      }
+    };
+    if (session?.accessToken) fetchContacts();
+  }, [session?.accessToken]);
 
-      const cleaned: ChatContact[] = (data as WrappedContact[]).map((item) => ({
-      id: item._id._id,
-      name: item._id.name,
-      photo: item._id.photo || "", // fallback if missing
-    }));
-
-    setContacts(cleaned);
-    } catch (err) {
-      console.error("Failed to fetch contacts:", err);
-    }
-  };
-
-  fetchContacts();
-}, [session?.accessToken]);
-
+  // Poll messages every 3 seconds
   useEffect(() => {
+    let interval: NodeJS.Timeout;
+
     const fetchMessages = async () => {
       if (!selectedContact || !session?.accessToken) return;
-      console.log("SelectedContactID : ", selectedContact.id);
       try {
         const res = await fetch(`${backendUrl}/api/v1/chat/${selectedContact.id}`, {
           headers: {
@@ -85,16 +85,14 @@ export default function ChatPage() {
         });
 
         const data = await res.json();
-        console.log("Fetch messages : ", data);
-
         const messages: Message[] = Array.isArray(data)
-        ? data.map((m: RawMessage, i: number) => ({
-            id: m._id ?? `${m.sender_id}-${m.createdAt}-${i}`,
-            text: m.text,
-            senderId: m.sender_id,    // <-- store actual sender ID here
-            timestamp: new Date(m.createdAt),
-          }))
-        : [];
+          ? data.map((m: RawMessage, i: number) => ({
+              id: m._id ?? `${m.sender_id}-${m.createdAt}-${i}`,
+              text: m.text,
+              senderId: m.sender_id,
+              timestamp: new Date(m.createdAt),
+            }))
+          : [];
 
         setMessagesByContact((prev) => ({
           ...prev,
@@ -105,12 +103,19 @@ export default function ChatPage() {
       }
     };
 
-    fetchMessages();
-  }, [selectedContact, session?.accessToken, session?.user?.id]);
+    if (selectedContact && session?.accessToken) {
+      fetchMessages();
+      interval = setInterval(fetchMessages, 3000); // poll every 3 seconds
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [selectedContact, session?.accessToken]);
 
   const filteredContacts = (contacts ?? []).filter((contact) =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ); 
+  );
 
   const handleSendMessage = async () => {
     if (!message.trim() || !selectedContact) return;
@@ -118,7 +123,7 @@ export default function ChatPage() {
     const newMessage: Message = {
       id: uuidv4(),
       text: message,
-      senderId: session?.user?.id || "unknown",  // use the current user's ID here
+      senderId: session?.user?.id || "unknown",
       timestamp: new Date(),
     };
 
@@ -150,11 +155,10 @@ export default function ChatPage() {
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
+      e.preventDefault();
+      handleSendMessage();
     }
-  }
-
+  };
   return (
     <div className="flex h-screen bg-white">
       {/* Left Sidebar */}
