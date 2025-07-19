@@ -48,7 +48,6 @@ export default function ChatPage() {
   const [contacts, setContacts] = useState<ChatContact[]>([])
   const { data: session } = useSession()
 
-  // Fetch chat users on load
   useEffect(() => {
     const fetchContacts = async () => {
       try {
@@ -71,7 +70,6 @@ export default function ChatPage() {
     if (session?.accessToken) fetchContacts();
   }, [session?.accessToken]);
 
-  // Poll messages every 3 seconds
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -105,7 +103,7 @@ export default function ChatPage() {
 
     if (selectedContact && session?.accessToken) {
       fetchMessages();
-      interval = setInterval(fetchMessages, 3000); // poll every 3 seconds
+      interval = setInterval(fetchMessages, 3000);
     }
 
     return () => {
@@ -159,11 +157,10 @@ export default function ChatPage() {
       handleSendMessage();
     }
   };
+
   return (
     <div className="flex h-screen bg-white">
-      {/* Left Sidebar */}
       <div className="w-80 border-r border-gray-200 flex flex-col">
-        {/* Search Bar */}
         <div className="p-4 border-b border-gray-200">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -176,13 +173,9 @@ export default function ChatPage() {
             />
           </div>
         </div>
-
-        {/* All Chat Header */}
         <div className="px-4 py-3 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">All Chat</h2>
         </div>
-
-        {/* Chat Contacts List */}
         <div className="flex-1 overflow-y-auto">
           {filteredContacts.map((contact) => (
             <div
@@ -210,11 +203,9 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {selectedContact ? (
           <>
-            {/* Chat Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold mr-3 relative overflow-hidden">
@@ -230,49 +221,72 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Messages Area */}
             <div className="flex-1 bg-gray-50 p-6 overflow-y-auto">
-              {(messagesByContact[selectedContact.id] || []).length === 0 ? (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  <p>เริ่มต้นการสนทนาของคุณ</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {(messagesByContact[selectedContact.id] || []).map((msg) => {
-                    const isCurrentUser = msg.senderId === session?.user?.id;
-                    console.log("msg.senderId:", msg.senderId, "session.user.id:", session?.user?.id, "isCurrentUser:", isCurrentUser);
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                            isCurrentUser
-                              ? "bg-blue-500 text-white"
-                              : "bg-white text-gray-800 border border-gray-200"
-                          }`}
-                        >
-                          <p>{msg.text}</p>
-                          <p
-                            className={`text-xs mt-1 ${
-                              isCurrentUser ? "text-blue-100" : "text-gray-500"
-                            }`}
-                          >
-                            {msg.timestamp.toLocaleTimeString("th-TH", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
+              {(() => {
+                const messages = messagesByContact[selectedContact.id] || [];
+                const isSameDay = (d1: Date, d2: Date) => d1.toDateString() === d2.toDateString();
+                const today = new Date();
+                let lastDate: string | null = null;
+
+                return messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <p>เริ่มต้นการสนทนาของคุณ</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((msg) => {
+                      const isCurrentUser = msg.senderId === session?.user?.id;
+                      const msgDate = msg.timestamp;
+                      const msgDateStr = msgDate.toDateString();
+                      const showDateSeparator = lastDate !== msgDateStr;
+                      lastDate = msgDateStr;
+                      const isToday = isSameDay(today, msgDate);
+
+                      return (
+                        <div key={msg.id}>
+                          {showDateSeparator && (
+                            <div className="text-center my-6">
+                              <span className="bg-gray-200 text-gray-700 px-4 py-1 rounded-full text-sm">
+                                {isToday
+                                  ? "วันนี้"
+                                  : msgDate.toLocaleDateString("th-TH", {
+                                      day: "numeric",
+                                      month: "long",
+                                      year: "numeric",
+                                    })}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}>
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                isCurrentUser
+                                  ? "bg-blue-500 text-white"
+                                  : "bg-white text-gray-800 border border-gray-200"
+                              }`}
+                            >
+                              <p>{msg.text}</p>
+                              <p
+                                className={`text-xs mt-1 ${
+                                  isCurrentUser ? "text-blue-100 text-right" : "text-gray-500 text-left"
+                                }`}
+                              >
+                                {msgDate.toLocaleTimeString("th-TH", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Message Input */}
             <div className="border-t border-gray-200 p-4">
               <div className="flex items-center space-x-3">
                 <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
@@ -299,12 +313,8 @@ export default function ChatPage() {
             </div>
           </>
         ) : (
-          /* No Chat Selected */
           <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center text-gray-500">
-              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <Search className="w-8 h-8 text-gray-400" />
-              </div>
               <h3 className="text-lg font-medium mb-2">เลือกการสนทนา</h3>
               <p>เลือกการสนทนาจากรายการด้านซ้ายเพื่อเริ่มต้น</p>
             </div>
@@ -312,5 +322,5 @@ export default function ChatPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
