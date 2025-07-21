@@ -117,7 +117,7 @@ export default function RegisterDetails() {
       const userId = decoded.id
 
       if (form.role === 'lawyer') {
-        router.push(`/register/details/lawyerDetails1?user_id=${userId}`)
+        router.push(`/register/details/lawyer-details?user_id=${userId}`)
       } else {
         router.push('/api/auth/signin')
       }
@@ -161,11 +161,10 @@ export default function RegisterDetails() {
 
         <input
           name="thaiId"
-          placeholder="เลขประจำตัวประชาชน*"
+          placeholder="เลขประจำตัวประชาชน"
           value={form.thaiId}
           onChange={handleChange}
           className="w-full p-3 border border-gray-300 rounded-full bg-gray-100 placeholder-gray-500 text-black"
-          required
         />
         <input
           name="email"
