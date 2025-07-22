@@ -26,6 +26,7 @@ import {
 
 type FormData = {
   category_type: "civil" | "criminal" | "unknown"
+  title: string
   description: string
   note: string
 }
@@ -72,6 +73,7 @@ export default function CreateCasePage() {
   const [files, setFiles] = useState<File[]>([])
   const [formData, setFormData] = useState<FormData>({
     category_type: "unknown",
+    title:"",
     description: "",
     note: "",
   })
@@ -176,6 +178,7 @@ export default function CreateCasePage() {
     try {
       const submitFormData = new FormData()
       submitFormData.append("category_type", formData.category_type)
+      submitFormData.append("title", formData.title)
       submitFormData.append("description", formData.description)
       submitFormData.append("note", formData.note)
       submitFormData.append("client_id", session?.user?.id || "")
@@ -220,6 +223,10 @@ export default function CreateCasePage() {
     e.preventDefault()
     if (!formData.description.trim()) {
       setError("Description is required")
+      return
+    }
+    if (!formData.title) {
+      setError("Title is required")
       return
     }
     if (!formData.category_type) {
@@ -297,6 +304,7 @@ export default function CreateCasePage() {
 
     // Append text fields
     form.append("category_type", formData.category_type);
+    form.append("title", formData.title);
     form.append("description", formData.description);
     form.append("note", formData.note);
     form.append("dateMode", dateSelectionMode);
@@ -449,7 +457,23 @@ export default function CreateCasePage() {
                 <option value="criminal">คดีอาญา</option>
               </select>
             </div>
-
+            {/* Title */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                <FileText className="w-4 h-4 inline mr-2" />
+                หัวข้อคดี *
+              </label>
+              <input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                required
+                placeholder="โปรดใส่หัวข้อของคดีของคุณ"
+                className="w-full px-4 py-3 border border-gray-300 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+              />
+              <p className="text-sm text-gray-500 mt-1">{formData.description.length} ตัวอักษร</p>
+            </div>
             {/* Description */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">

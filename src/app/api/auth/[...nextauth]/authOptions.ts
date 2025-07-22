@@ -119,10 +119,6 @@ export const authOptions : NextAuthOptions = {
       } catch (error) {
         console.error("Social login error:", error);
       }
-      // ✅ Store Google access_token (for Calendar API)
-      if (account.provider === "google" && account.access_token) {
-        token.googleAccessToken = account.access_token;
-      }
     }
 
     return token;
