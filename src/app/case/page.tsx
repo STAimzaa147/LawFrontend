@@ -18,6 +18,7 @@ type Case = {
     photo: string
   }
   category_type: string
+  title:string
   description: string
   consultation_status: string
   createdAt: string
@@ -107,6 +108,7 @@ export default function CasePage() {
   // Filter cases by search term and selected status
   const filteredCases = cases.filter((case_item) => {
     const matchesSearch =
+      case_item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       case_item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       case_item.category_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
       case_item.lawyer_id.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -428,6 +430,11 @@ export default function CasePage() {
                               {case_item.category_type}
                             </span>
                           </div>
+                          {/* Case Title */}
+                          <h2 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-1">
+                            {case_item.title}
+                          </h2>
+                          {/* Description */}
                           <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                             {truncateDescription(case_item.description)}
                           </p>

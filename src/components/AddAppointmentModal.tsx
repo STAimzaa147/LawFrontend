@@ -31,7 +31,7 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
   const [userCases, setUserCases] = useState<UserCase[]>([])
   const caseOptions = userCases.map((userCase) => ({
     value: userCase._id,
-    label: `(${userCase.description.slice(0, 50)})`,
+    label: `(${userCase.title.slice(0, 50)})`,
     }))
   const [casesLoading, setCasesLoading] = useState(false)
   const [selectedCaseId, setSelectedCaseId] = useState("")

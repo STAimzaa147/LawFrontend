@@ -48,6 +48,7 @@ type CaseDetails = {
   lawyer_id?: Lawyer
   offered_Lawyers: Lawyer[]
   category_type: "civil" | "criminal" | "unknown"
+  title:string
   description: string
   consultation_date?: string
   consultation_status: "pending" | "cancelled" | "confirmed" | "rejected"
@@ -68,8 +69,9 @@ export default function CaseDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [deleteLoading, setDeleteLoading] = useState(false)
-  const [isEditingDescription, setIsEditingDescription] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [editedDescription, setEditedDescription] = useState("")
+  const [editedTitle, setEditedTitle] = useState("")
   const [saveLoading, setSaveLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [deletingFileIndex, setDeletingFileIndex] = useState<number | null>(null)
@@ -89,6 +91,7 @@ export default function CaseDetailsPage() {
         if (data.success) {
           console.log(data.data)
           setCaseData(data.data)
+          setEditedTitle(data.data.title)
           setEditedDescription(data.data.description)
         } else {
           setError(data.message || "ไม่สามารถโหลดรายละเอียดคดีได้")
@@ -132,7 +135,7 @@ export default function CaseDetailsPage() {
     }
   }
 
-  const handleSaveDescription = async () => {
+  const handleSave = async () => {
     setSaveLoading(true)
     try {
       const res = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
@@ -142,13 +145,14 @@ export default function CaseDetailsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({
+          title:editedTitle,
           description: editedDescription,
         }),
       })
       const data = await res.json()
       if (data.success) {
-        setCaseData((prev) => (prev ? { ...prev, description: editedDescription } : null))
-        setIsEditingDescription(false)
+        setCaseData((prev) => (prev ? { ...prev,title: editedTitle, description: editedDescription } : null))
+        setIsEditing(false)
       } else {
         alert("ไม่สามารถบันทึกการเปลี่ยนแปลงได้")
       }
@@ -161,8 +165,9 @@ export default function CaseDetailsPage() {
   }
 
   const handleCancelEdit = () => {
+    setEditedTitle(caseData?.title || "")
     setEditedDescription(caseData?.description || "")
-    setIsEditingDescription(false)
+    setIsEditing(false)
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -542,69 +547,88 @@ const handleReject = async () => {
           {/* Main Case Information */}
           <div className="lg:col-span-2 space-y-6">
             {/* Case Overview */}
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex gap-3">
-                  <span
-                    className={`inline-block text-sm px-3 py-1 rounded-full ${getCategoryColor(caseData.category_type)}`}
-                  >
-                    {getCategoryText(caseData.category_type)}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${getStatusColor(caseData.consultation_status)}`}
-                  >
-                    {getStatusIcon(caseData.consultation_status)}
-                    {getStatusText(caseData.consultation_status)}
-                  </span>
-                </div>
-              </div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 relative">
+            {/* Edit button top right */}
+            {isOwner && !isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="absolute top-4 right-4 text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition flex items-center gap-1"
+              >
+                <Edit className="w-4 h-4" />
+                <span className="text-sm">แก้ไข</span>
+              </button>
+            )}
 
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">รายละเอียดคดี</h2>
-                {isOwner && !isEditingDescription && (
-                  <button
-                    onClick={() => setIsEditingDescription(true)}
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors px-3 py-1 hover:bg-blue-50 rounded-md"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span className="text-sm">แก้ไข</span>
-                  </button>
-                )}
-              </div>
+            {/* Title */}
+            <div className="mb-4">
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="text-2xl font-bold text-gray-900 w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <h1 className="text-2xl font-bold text-gray-900">{caseData.title}</h1>
+              )}
+            </div>
 
-              <div className="prose max-w-none">
-                {isEditingDescription ? (
-                  <div className="space-y-4">
-                    <textarea
-                      value={editedDescription}
-                      onChange={(e) => setEditedDescription(e.target.value)}
-                      className="w-full min-h-[200px] p-4 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
-                      placeholder="กรอกรายละเอียดคดี..."
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleSaveDescription}
-                        disabled={saveLoading}
-                        className="flex items-center gap-2 bg-[#353C63] text-white px-4 py-2 rounded-lg hover:bg-[#353C63]/80 transition disabled:opacity-50"
-                      >
-                        <Save className="w-4 h-4" />
-                        {saveLoading ? "กำลังบันทึก..." : "บันทึก"}
-                      </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        disabled={saveLoading}
-                        className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition disabled:opacity-50"
-                      >
-                        <X className="w-4 h-4" />
-                        ยกเลิก
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-700 whitespace-pre-wrap">{caseData.description}</p>
-                )}
+            {/* Badges */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex gap-3">
+                <span
+                  className={`inline-block text-sm px-3 py-1 rounded-full ${getCategoryColor(caseData.category_type)}`}
+                >
+                  {getCategoryText(caseData.category_type)}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${getStatusColor(caseData.consultation_status)}`}
+                >
+                  {getStatusIcon(caseData.consultation_status)}
+                  {getStatusText(caseData.consultation_status)}
+                </span>
               </div>
             </div>
+
+            {/* Section title */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">รายละเอียดคดี</h2>
+            </div>
+
+            {/* Description */}
+            <div className="prose max-w-none">
+              {isEditing ? (
+                <div className="space-y-4">
+                  <textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    className="w-full min-h-[200px] p-4 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                    placeholder="กรอกรายละเอียดคดี..."
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSave}
+                      disabled={saveLoading}
+                      className="flex items-center gap-2 bg-[#353C63] text-white px-4 py-2 rounded-lg hover:bg-[#353C63]/80 transition disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                      {saveLoading ? "กำลังบันทึก..." : "บันทึก"}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={saveLoading}
+                      className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4" />
+                      ยกเลิก
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-700 whitespace-pre-wrap">{caseData.description}</p>
+              )}
+            </div>
+          </div>
 
             {/* Summons File Section - Only 1 File Allowed */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
