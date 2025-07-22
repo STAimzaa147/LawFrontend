@@ -23,11 +23,6 @@ export default function LawyerDetailsForm() {
     documentDelivery: false,
     documentDeliveryFee: "",
     expertise: [] as string[],
-    workingDays: [] as string[],
-    workingHours: {
-      start: "",
-      end: "",
-    },
   })
 
   const [error, setError] = useState("")
@@ -47,7 +42,6 @@ export default function LawyerDetailsForm() {
     "คดีที่ดินและสิทธิบรรพบุรุษ",
     "คดีที่ดินและทรัพย์สิน",
   ]
-  const daysOfWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"]
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -97,8 +91,6 @@ export default function LawyerDetailsForm() {
         civilCase_specialized: form.expertise,
         criminalCase_specialized: [], // As per original code, no specific input for this
         verificationDocs: licenseBase64,
-        working_days: form.workingDays,
-        working_hours: form.workingHours,
       }
 
       const response = await fetch(`${backendUrl}/api/v1/lawyer`, {
@@ -228,41 +220,6 @@ export default function LawyerDetailsForm() {
                 <span className="text-black">{tag}</span>
               </label>
             ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-black font-medium mb-2 block">วันที่สะดวกให้บริการ</label>
-          <div className="grid grid-cols-4 gap-2">
-            {daysOfWeek.map((day) => (
-              <label key={day} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={form.workingDays.includes(day)}
-                  onChange={() => handleCheckboxChange("workingDays", day)}
-                  className="accent-accent-blue"
-                />
-                <span className="text-black">{day}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className="text-black font-medium mb-2 block">ช่วงเวลาทำงาน</label>
-          <div className="flex space-x-4">
-            <input
-              type="text"
-              placeholder="เริ่มต้น (เช่น 09:00)"
-              value={form.workingHours.start}
-              onChange={(e) => setForm({ ...form, workingHours: { ...form.workingHours, start: e.target.value } })}
-              className="w-full p-3 border border-gray-300 rounded-full bg-gray-100 text-black"
-            />
-            <input
-              type="text"
-              placeholder="สิ้นสุด (เช่น 17:00)"
-              value={form.workingHours.end}
-              onChange={(e) => setForm({ ...form, workingHours: { ...form.workingHours, end: e.target.value } })}
-              className="w-full p-3 border border-gray-300 rounded-full bg-gray-100 text-black"
-            />
           </div>
         </div>
         <button
