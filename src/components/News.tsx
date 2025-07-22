@@ -4,6 +4,29 @@ import Image from "next/image"
 import Link from "next/link"
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi"
 
+function useResponsiveCards() {
+  const [cardsToShow, setCardsToShow] = useState(1)
+
+  useEffect(() => {
+    const updateCardsToShow = () => {
+      const width = window.innerWidth
+      if (width >= 1024) {
+        setCardsToShow(4) // lg+
+      } else if (width >= 768) {
+        setCardsToShow(2) // md
+      } else {
+        setCardsToShow(1) // sm and below
+      }
+    }
+
+    updateCardsToShow()
+    window.addEventListener("resize", updateCardsToShow)
+    return () => window.removeEventListener("resize", updateCardsToShow)
+  }, [])
+
+  return cardsToShow
+}
+
 type NewsItem = {
   _id: string
   title: string
@@ -18,6 +41,7 @@ export default function News() {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [startIndex, setStartIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const cardsToShow = useResponsiveCards()
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
   useEffect(() => {
@@ -45,62 +69,59 @@ export default function News() {
   }
 
   const handleNext = () => {
-    if (startIndex + 4 < newsItems.length) setStartIndex(startIndex + 1)
-  }
+  if (startIndex + cardsToShow < newsItems.length) setStartIndex(startIndex + 1)
+}
 
-  const visibleItems = newsItems.slice(startIndex, startIndex + 4)
+  const visible = newsItems.slice(startIndex, startIndex + cardsToShow)
 
   if (loading) {
     return <p className="text-center py-10">Loading news...</p>
   }
 
   return (
-    <section className="relative px-28 py-10 text-white">
-      {/* Left Button */}
+    <section className="relative px-4 py-10 text-white overflow-hidden">
+      {/* Navigation Buttons */}
       <button
         onClick={handlePrev}
         disabled={startIndex === 0}
-        className="absolute left-10 top-1/2 transform -translate-y-1/2 z-10 bg-black text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 disabled:opacity-40"
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-black text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 disabled:opacity-40"
       >
         <HiChevronLeft className="w-5 h-5 text-white" />
       </button>
 
-      {/* Right Button */}
       <button
         onClick={handleNext}
-        disabled={startIndex + 4 >= newsItems.length}
-        className="absolute right-10 top-1/2 transform -translate-y-1/2 z-10 bg-black text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 disabled:opacity-40"
+        disabled={startIndex + cardsToShow >= newsItems.length}
+        className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-black text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700 disabled:opacity-40"
       >
         <HiChevronRight className="w-5 h-5 text-white" />
       </button>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 items-center">
-        {visibleItems.map((item) => (
-          <Link key={item._id} href={`/news/${item._id}`}>
-            <div>
-              <Image
-                src={item.image || "/placeholder.svg"}
-                alt={item.title}
-                width={500}
-                height={300}
-                unoptimized
-                className="object-cover w-full h-48"
-              />
-              <div className="p-4 flex flex-col flex-grow">
-                <h2 className="text-xl font-[700] text-white mb-3">{item.title}</h2>
-                <p className="text-white font-[100] line-clamp-3 flex-grow">
-                  {item.summary || item.content.slice(0, 100) + "..."}
-                </p>
-                <div className="w-2/8 border-t border-white mt-4"></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-300">{item.view_count} views</span>
-                  <span className="text-sm text-gray-300">
-                    {new Date(item.createdAt).toLocaleString("th-TH", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </span>
-                </div>
+      {/* Responsive Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {visible.map((item) => (
+          <Link key={item._id} href={`/news/${item._id}`} className="bg-white/5 rounded-lg overflow-hidden shadow-md h-full flex flex-col">
+            <Image
+              src={item.image || "/placeholder.svg"}
+              alt={item.title}
+              width={500}
+              height={300}
+              unoptimized
+              className="object-cover w-full h-48"
+            />
+            <div className="p-4 flex flex-col flex-grow">
+              <h2 className="text-xl font-semibold text-white mb-2">{item.title}</h2>
+              <p className="text-sm text-white font-light line-clamp-3 flex-grow">
+                {item.summary || item.content.slice(0, 100) + "..."}
+              </p>
+              <div className="border-t border-white/20 mt-4 pt-2 text-sm text-gray-300 flex justify-between items-center">
+                <span>{item.view_count} views</span>
+                <span>
+                  {new Date(item.createdAt).toLocaleString("th-TH", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
               </div>
             </div>
           </Link>

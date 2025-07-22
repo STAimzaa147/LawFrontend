@@ -62,12 +62,16 @@ export default function ReportComment({ isOpen, onClose, onSubmit, commentId, co
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div ref={modalRef} className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-sm sm:max-w-md md:max-w-lg rounded-lg bg-white p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+      >
         {/* Header */}
         <div className="mb-4 border-b pb-4">
           <h2 className="text-xl font-semibold text-gray-900">รายงานความคิดเห็น</h2>
           <p className="mt-1 text-sm text-gray-600">
-            คุณกำลังรายงานความคิดเห็น: <span className="font-semibold line-clamp-1">{commentContent}</span>
+            คุณกำลังรายงานความคิดเห็น:{" "}
+            <span className="font-semibold line-clamp-1">{commentContent}</span>
             <br />
             กรุณาเลือกเหตุผลในการรายงานความคิดเห็นนี้
           </p>
@@ -97,12 +101,13 @@ export default function ReportComment({ isOpen, onClose, onSubmit, commentId, co
                 <option value="อื่นๆ">อื่นๆ</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
                   <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 6.757 7.586 5.343 9z" />
                 </svg>
               </div>
             </div>
           </div>
+
           <div className="grid gap-2">
             <label htmlFor="details" className="text-sm font-medium text-gray-700">
               รายละเอียดเพิ่มเติม (ถ้ามี)
@@ -119,7 +124,7 @@ export default function ReportComment({ isOpen, onClose, onSubmit, commentId, co
           </div>
         </div>
 
-        {/* Error message display */}
+        {/* Error message */}
         {errorMessage && (
           <p className="mb-4 text-sm text-red-500" role="alert">
             {errorMessage}

@@ -61,8 +61,11 @@ export default function ReportForm({ isOpen, onClose, onSubmit, forumTitle }: Re
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div ref={modalRef} className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-        {/* ส่วนหัว */}
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-md sm:max-w-lg md:max-w-xl rounded-lg bg-white p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+      >
+        {/* Header */}
         <div className="mb-4 border-b pb-4">
           <h2 className="text-xl font-semibold text-gray-900">รายงานกระทู้</h2>
           <p className="mt-1 text-sm text-gray-600">
@@ -72,7 +75,7 @@ export default function ReportForm({ isOpen, onClose, onSubmit, forumTitle }: Re
           </p>
         </div>
 
-        {/* เนื้อหา */}
+        {/* Content */}
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <label htmlFor="reason" className="text-sm font-medium text-gray-700">
@@ -86,9 +89,7 @@ export default function ReportForm({ isOpen, onClose, onSubmit, forumTitle }: Re
                 className="block w-full appearance-none rounded-md border border-gray-300 bg-white px-3 py-2 pr-8 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
                 disabled={isSubmitting}
               >
-                <option value="" disabled>
-                  กรุณาเลือกเหตุผล
-                </option>
+                <option value="" disabled>กรุณาเลือกเหตุผล</option>
                 <option value="สแปม">สแปม</option>
                 <option value="เนื้อหาไม่เหมาะสม">เนื้อหาไม่เหมาะสม</option>
                 <option value="ละเมิดลิขสิทธิ์">ละเมิดลิขสิทธิ์</option>
@@ -96,12 +97,13 @@ export default function ReportForm({ isOpen, onClose, onSubmit, forumTitle }: Re
                 <option value="อื่นๆ">อื่นๆ</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
                   <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 6.757 7.586 5.343 9z" />
                 </svg>
               </div>
             </div>
           </div>
+
           <div className="grid gap-2">
             <label htmlFor="details" className="text-sm font-medium text-gray-700">
               รายละเอียดเพิ่มเติม (ถ้ามี)
@@ -118,12 +120,12 @@ export default function ReportForm({ isOpen, onClose, onSubmit, forumTitle }: Re
           </div>
         </div>
 
-        {/* ข้อความแจ้งเตือนข้อผิดพลาด */}
+        {/* Error message */}
         {errorMessage && (
           <p className="mb-4 text-sm text-red-500">{errorMessage}</p>
         )}
 
-        {/* ส่วนท้าย */}
+        {/* Footer */}
         <div className="flex justify-end gap-2 border-t pt-4">
           <button
             type="button"

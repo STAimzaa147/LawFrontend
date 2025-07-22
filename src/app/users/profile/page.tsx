@@ -331,7 +331,7 @@ export default function ProfilePage() {
         return
       }
       const formData = new FormData()
-      formData.append("photo", file)
+      formData.append("image", file)
       const res = await fetch(`${backendUrl}/api/v1/auth/updatePhoto`, {
         method: "PUT",
         headers: {
