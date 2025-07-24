@@ -115,7 +115,7 @@ export default function CaseDetailsPage() {
 
     setDeleteLoading(true)
     try {
-      const res = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
+      const res = await fetch(`${backendUrl}/api/v1/caseRequest/delete/${caseId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,

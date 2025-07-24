@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Bell, X } from "lucide-react"
+import { Bell, X, Check } from "lucide-react"
 import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react"
 import Link from "next/link"
 import { getSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 interface Notification {
   _id: string
@@ -14,38 +15,30 @@ interface Notification {
   link?: string
 }
 
-type NotificationButtonProps = Record<string, never>
-
-export default function NotificationButton({}: NotificationButtonProps) {
+export default function NotificationButton() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState<string | null>(null)
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+  const router = useRouter()
 
   useEffect(() => {
     const fetchSessionAndNotifications = async () => {
       setLoading(true)
       try {
         const session = await getSession()
-        if (!session) {
-          console.warn("No session found, not fetching notifications")
-          setLoading(false)
-          return
-        }
-        setToken(session.accessToken || null)
+        if (!session?.accessToken) return
+        setToken(session.accessToken)
 
         const res = await fetch(`${backendUrl}/api/v1/notification`, {
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`, // use token from session
+            Authorization: `Bearer ${session.accessToken}`,
           },
         })
 
         const json = await res.json()
         if (json.success) {
           setNotifications(json.data)
-        } else {
-          console.error("Failed to fetch notifications:", json.message)
         }
       } catch (error) {
         console.error("Failed to load notifications", error)
@@ -63,7 +56,6 @@ export default function NotificationButton({}: NotificationButtonProps) {
       await fetch(`${backendUrl}/api/v1/notification/${id}/read`, {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       })
@@ -75,17 +67,56 @@ export default function NotificationButton({}: NotificationButtonProps) {
     }
   }
 
+  const markAllAsRead = async () => {
+    if (!token) return
+    try {
+      await Promise.all(
+        notifications
+          .filter((n) => !n.read)
+          .map((n) =>
+            fetch(`${backendUrl}/api/v1/notification/${n._id}/read`, {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            })
+          )
+      )
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    } catch (err) {
+      console.error("Failed to mark all as read", err)
+    }
+  }
+
+  const deleteNotification = async (id: string) => {
+    if (!token) return
+    try {
+      await fetch(`${backendUrl}/api/v1/notification/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setNotifications((prev) => prev.filter((n) => n._id !== id))
+    } catch (err) {
+      console.error("Failed to delete notification", err)
+    }
+  }
+
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length
 
   const formatTime = (isoDate: string) => {
     const date = new Date(isoDate)
     const now = new Date()
     const diff = (now.getTime() - date.getTime()) / 1000
-
     if (diff < 60) return "ไม่กี่วินาทีที่แล้ว"
     if (diff < 3600) return `${Math.floor(diff / 60)} นาทีที่แล้ว`
     if (diff < 86400) return `${Math.floor(diff / 3600)} ชั่วโมงที่แล้ว`
-    return date.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
   }
 
   return (
@@ -104,7 +135,17 @@ export default function NotificationButton({}: NotificationButtonProps) {
 
       <MenuItems className="absolute right-0 mt-2 w-80 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg focus:outline-none z-50">
         <div className="py-1">
-          <div className="px-4 py-2 text-sm font-semibold text-gray-800 border-b border-gray-200">การแจ้งเตือน</div>
+          <div className="px-4 py-2 flex justify-between items-center text-sm font-semibold text-gray-800 border-b border-gray-200">
+            <span>การแจ้งเตือน</span>
+            {notifications.length > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="flex items-center gap-1 text-[#353C63] hover:text-blue-800 text-xs"
+              >
+                <Check className="w-4 h-4" /> อ่านทั้งหมด
+              </button>
+            )}
+          </div>
           {loading ? (
             <div className="px-4 py-2 text-sm text-gray-500">กำลังโหลด...</div>
           ) : notifications.length === 0 ? (
@@ -114,23 +155,25 @@ export default function NotificationButton({}: NotificationButtonProps) {
               <MenuItem key={notification._id}>
                 {({ active }) => (
                   <div
-                    className={`flex items-start justify-between px-4 py-2 text-sm ${
+                    className={`flex items-start justify-between px-4 py-2 text-sm cursor-pointer ${
                       active ? "bg-gray-100" : ""
                     } ${notification.read ? "text-gray-500" : "text-gray-900 font-medium"}`}
+                    onClick={async () => {
+                      if (!notification.read) await markAsRead(notification._id)
+                      if (notification.link) router.push(notification.link)
+                    }}
                   >
                     <div className="flex-1 pr-2">
                       <p>{notification.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {formatTime(notification.createdAt)}
-                      </p>
+                      <p className="text-xs text-gray-400 mt-1">{formatTime(notification.createdAt)}</p>
                     </div>
                     <button
-                      className="ml-2 p-1 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600"
-                      aria-label="Dismiss notification"
                       onClick={(e) => {
                         e.stopPropagation()
-                        markAsRead(notification._id)
+                        deleteNotification(notification._id)
                       }}
+                      className="ml-2 p-1 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                      aria-label="Delete notification"
                     >
                       <X className="h-4 w-4" />
                     </button>

@@ -143,7 +143,7 @@ export default function CasePage() {
     if (!confirmed) return
 
     try {
-      const res = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
+      const res = await fetch(`${backendUrl}/api/v1/caseRequest/delete/${caseId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
