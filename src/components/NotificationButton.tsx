@@ -1,30 +1,92 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Bell, X } from "lucide-react"
 import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react"
 import Link from "next/link"
+import { getSession } from "next-auth/react"
 
 interface Notification {
-  id: string
+  _id: string
   message: string
-  timestamp: string
+  createdAt: string
   read: boolean
+  link?: string
 }
 
-// Removed notificationCount from props as it's now derived internally
 type NotificationButtonProps = Record<string, never>
 
 export default function NotificationButton({}: NotificationButtonProps) {
-  // Placeholder notifications for demonstration
-  const notifications: Notification[] = [
-    { id: "1", message: "คุณมีข้อความใหม่จากแชท", timestamp: "5 นาทีที่แล้ว", read: false },
-    { id: "2", message: "กระทู้ 'วิธีการใช้งาน Next.js' มีการตอบกลับใหม่", timestamp: "1 ชั่วโมงที่แล้ว", read: false },
-    { id: "3", message: "การชำระเงินของคุณสำเร็จแล้ว", timestamp: "เมื่อวานนี้", read: true },
-    { id: "4", message: "มีข่าวใหม่: 'เทคโนโลยี AI ล่าสุด'", timestamp: "2 วันที่แล้ว", read: true },
-  ]
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [token, setToken] = useState<string | null>(null)
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
-  // Filter unread notifications for the badge count
+  useEffect(() => {
+    const fetchSessionAndNotifications = async () => {
+      setLoading(true)
+      try {
+        const session = await getSession()
+        if (!session) {
+          console.warn("No session found, not fetching notifications")
+          setLoading(false)
+          return
+        }
+        setToken(session.accessToken || null)
+
+        const res = await fetch(`${backendUrl}/api/v1/notification`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`, // use token from session
+          },
+        })
+
+        const json = await res.json()
+        if (json.success) {
+          setNotifications(json.data)
+        } else {
+          console.error("Failed to fetch notifications:", json.message)
+        }
+      } catch (error) {
+        console.error("Failed to load notifications", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSessionAndNotifications()
+  }, [backendUrl])
+
+  const markAsRead = async (id: string) => {
+    if (!token) return
+    try {
+      await fetch(`${backendUrl}/api/v1/notification/${id}/read`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      )
+    } catch (err) {
+      console.error("Failed to mark as read", err)
+    }
+  }
+
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length
+
+  const formatTime = (isoDate: string) => {
+    const date = new Date(isoDate)
+    const now = new Date()
+    const diff = (now.getTime() - date.getTime()) / 1000
+
+    if (diff < 60) return "ไม่กี่วินาทีที่แล้ว"
+    if (diff < 3600) return `${Math.floor(diff / 60)} นาทีที่แล้ว`
+    if (diff < 86400) return `${Math.floor(diff / 3600)} ชั่วโมงที่แล้ว`
+    return date.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })
+  }
 
   return (
     <Menu as="div" className="relative inline-block text-left">
@@ -43,11 +105,13 @@ export default function NotificationButton({}: NotificationButtonProps) {
       <MenuItems className="absolute right-0 mt-2 w-80 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg focus:outline-none z-50">
         <div className="py-1">
           <div className="px-4 py-2 text-sm font-semibold text-gray-800 border-b border-gray-200">การแจ้งเตือน</div>
-          {notifications.length === 0 ? (
+          {loading ? (
+            <div className="px-4 py-2 text-sm text-gray-500">กำลังโหลด...</div>
+          ) : notifications.length === 0 ? (
             <div className="px-4 py-2 text-sm text-gray-500">ไม่มีการแจ้งเตือนใหม่</div>
           ) : (
             notifications.map((notification) => (
-              <MenuItem key={notification.id}>
+              <MenuItem key={notification._id}>
                 {({ active }) => (
                   <div
                     className={`flex items-start justify-between px-4 py-2 text-sm ${
@@ -56,16 +120,16 @@ export default function NotificationButton({}: NotificationButtonProps) {
                   >
                     <div className="flex-1 pr-2">
                       <p>{notification.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">{notification.timestamp}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {formatTime(notification.createdAt)}
+                      </p>
                     </div>
-                    {/* Example action: Dismiss button */}
                     <button
                       className="ml-2 p-1 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600"
                       aria-label="Dismiss notification"
                       onClick={(e) => {
-                        e.stopPropagation() // Prevent closing the menu
-                        console.log(`Dismiss notification ${notification.id}`)
-                        // Add logic to dismiss/mark as read
+                        e.stopPropagation()
+                        markAsRead(notification._id)
                       }}
                     >
                       <X className="h-4 w-4" />
