@@ -155,6 +155,7 @@ export default function LawyerDetailsForm() {
           accept=".pdf,.jpg,.jpeg,.png"
           onChange={handleFileChange}
           className="w-full p-3 border border-gray-300 rounded-full bg-gray-100 text-black file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#2c3254] file:text-white hover:file:bg-[#2c3254]/80"
+          required
         />
 
         {/* New field for Law Firm Name */}

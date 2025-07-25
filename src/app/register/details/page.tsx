@@ -72,13 +72,6 @@ export default function RegisterDetails() {
     setError('')
 
     try {
-      const rawThaiId = form.thaiId.replace(/\D/g, '')  // Remove dashes
-
-      if (rawThaiId.length !== 13) {
-        setError('เลขประจำตัวประชาชนต้องมี 13 หลัก')
-        setLoading(false)
-        return
-      }
 
       const payload = {
         name: `${form.name} ${form.lastname}`, // combine if backend expects full name
@@ -86,7 +79,7 @@ export default function RegisterDetails() {
         password: form.password,
         tel: phone,
         thai_id: form.thaiId,
-        line_id: form.lineId || "not_provided",
+        line_id: form.lineId,
         role: form.role,
         location: {
           district: form.district,   // or split properly if you add both fields

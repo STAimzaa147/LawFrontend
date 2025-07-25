@@ -90,6 +90,27 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const maskValue = (value: string, type: "email" | "phone" | "thaiId" | "lineId") => {
+  if (!value) return "";
+
+  switch (type) {
+    case "email": {
+      const [user, domain] = value.split("@");
+      return user.length > 2 ? `${user.slice(0, 2)}***@${domain}` : `***@${domain}`;
+    }
+    case "phone": {
+      return value.length > 4 ? `*******${value.slice(-3)}` : "**********";
+    }
+    case "thaiId": {
+      return value.length === 17 ? `***********${value.slice(11, 17)}` : "*************";
+    }
+    case "lineId": {
+      return value.length > 3 ? `${value.slice(0, 2)}***${value.slice(-1)}` : "***";
+    }
+    default:
+      return "***";
+  }
+};
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -651,7 +672,7 @@ export default function ProfilePage() {
               <input
                 id="email"
                 type="email"
-                value={formData.email}
+                value={isEditing ? formData.email : maskValue(formData.email, "email")}
                 disabled={true}
                 placeholder="กรอกอีเมลของคุณ"
                 className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
@@ -666,7 +687,7 @@ export default function ProfilePage() {
                 <input
                   id="phone"
                   type="tel"
-                  value={formData.phone}
+                  value={isEditing ? formData.phone : maskValue(formData.phone, "phone")}
                   disabled={true}
                   placeholder="123-456-7890"
                   className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
@@ -680,10 +701,10 @@ export default function ProfilePage() {
                 <input
                   id="lineId"
                   type="text"
-                  value={formData.lineId}
+                  value={isEditing ? formData.lineId : maskValue(formData.lineId, "lineId")}
                   onChange={(e) => handleInputChange("lineId", e.target.value)}
                   disabled={!isEditing}
-                  placeholder="@username"
+                  placeholder=""
                   className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 />
               </div>
@@ -918,10 +939,10 @@ export default function ProfilePage() {
               <input
                 id="thaiId"
                 type="text"
-                value={formData.thaiId}
+                value={isEditing ? formData.thaiId : maskValue(formData.thaiId, "thaiId")}
                 onChange={(e) => handleInputChange("thaiId", e.target.value)}
                 disabled={!isEditing}
-                placeholder="1234567890123"
+                placeholder=""
                 maxLength={13}
                 className="w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
               />

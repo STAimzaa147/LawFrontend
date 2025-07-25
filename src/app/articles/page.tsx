@@ -59,14 +59,14 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       <div className="max-w-7xl mx-auto">
         {/* Header with Add Article Button */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Articles</h1>
+          <h1 className="text-2xl font-bold">บทความ</h1>
           {session?.user?.role === "lawyer" && (
             <Link
               href="/articles/create"
               className="inline-flex items-center gap-2 bg-[#C9A55C] text-white px-4 py-2 rounded-lg hover:bg-[#B8944A] transition-colors font-medium"
             >
               <Plus className="w-4 h-4" />
-              Add Article
+              สร้างบทความ
             </Link>
             )}
         </div>

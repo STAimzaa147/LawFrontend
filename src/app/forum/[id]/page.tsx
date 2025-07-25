@@ -386,19 +386,19 @@ export default function ForumPage({ params }: { params: { id: string } }) {
                   {/* Comment Menu */}
                   <div className="absolute top-2 right-2">
                     <CommentMenu
-                      isOwner={session?.user?.id === comment.user_id._id}
+                      isOwner={session?.user?.id === comment.user_id?._id}
                       onEdit={() => handleEdit(comment)}
                       onDelete={() => handleDelete(comment._id)}
                       onReport={() => {
-                          if (!session) {
-                            alert("กรุณาเข้าสู่ระบบก่อนแจ้งรายงาน")
-                            router.push("/api/auth/signin")
-                            return
-                          }
-                          setCommentToReport(comment)
-                          setReportCommentModalOpen(true)
-                        }}     
-                     />
+                        if (!session) {
+                          alert("กรุณาเข้าสู่ระบบก่อนแจ้งรายงาน");
+                          router.push("/api/auth/signin");
+                          return;
+                        }
+                        setCommentToReport(comment);
+                        setReportCommentModalOpen(true);
+                      }}
+                    />
                   </div>
                 </li>
                 ) : null,
