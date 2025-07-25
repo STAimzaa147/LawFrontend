@@ -29,6 +29,8 @@ interface RawMessage {
   text: string
   sender_id: string
   createdAt: string
+  fileUrl?: string
+  fileType?: string
 }
 
 interface Message {
@@ -36,6 +38,8 @@ interface Message {
   text: string
   senderId: string
   timestamp: Date
+  fileUrl?: string
+  fileType?: string
 }
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
@@ -46,6 +50,7 @@ export default function ChatPage() {
   const [messagesByContact, setMessagesByContact] = useState<Record<string, Message[]>>({});
   const [searchQuery, setSearchQuery] = useState("")
   const [contacts, setContacts] = useState<ChatContact[]>([])
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { data: session } = useSession()
 
   useEffect(() => {
@@ -89,6 +94,8 @@ export default function ChatPage() {
               text: m.text,
               senderId: m.sender_id,
               timestamp: new Date(m.createdAt),
+              fileUrl: m.fileUrl,
+              fileType: m.fileType,
             }))
           : [];
 
@@ -116,27 +123,31 @@ export default function ChatPage() {
   );
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !selectedContact) return;
+    if (!message.trim() && !selectedFile) return;
+    if (!selectedContact) return;
 
-    const newMessage: Message = {
-      id: uuidv4(),
-      text: message,
-      senderId: session?.user?.id || "unknown",
-      timestamp: new Date(),
-    };
+    const formData = new FormData();
+    formData.append("receiver_id", selectedContact.id);
+    formData.append("text", message);
+    if (selectedFile) {
+      formData.append("file", selectedFile);
+    }
 
     try {
       await fetch(`${backendUrl}/api/v1/chat`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${session?.accessToken}`,
         },
-        body: JSON.stringify({
-          receiver_id: selectedContact.id,
-          text: message,
-        }),
+        body: formData,
       });
+
+      const newMessage: Message = {
+        id: uuidv4(),
+        text: message,
+        senderId: session?.user?.id || "unknown",
+        timestamp: new Date(),
+      };
 
       setMessagesByContact((prev) => {
         const currentMessages = prev[selectedContact.id] || [];
@@ -145,7 +156,9 @@ export default function ChatPage() {
           [selectedContact.id]: [...currentMessages, newMessage],
         };
       });
+
       setMessage("");
+      setSelectedFile(null);
     } catch (err) {
       console.error("Failed to send message:", err);
     }
@@ -267,6 +280,31 @@ export default function ChatPage() {
                               }`}
                             >
                               <p>{msg.text}</p>
+                              {msg.fileUrl && (
+                                <>
+                                  {msg.fileType?.startsWith("image/") && (
+                                    <Image
+                                      src={msg.fileUrl}
+                                      alt="sent image"
+                                      width={200}
+                                      height={200}
+                                      unoptimized
+                                      className="mt-2 rounded-md object-contain"
+                                    />
+                                  )}
+
+                                  {(msg.fileType === "application/pdf" || (!msg.fileType?.startsWith("image/") && msg.fileType !== "application/pdf")) && (
+                                    <a
+                                      href={msg.fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block mt-2 text-sm text-white hover:underline"
+                                    >
+                                      📄 เปิดไฟล์แนบ
+                                    </a>
+                                  )}
+                                </>
+                              )}
                               <p
                                 className={`text-xs mt-1 ${
                                   isCurrentUser ? "text-blue-100 text-right" : "text-gray-500 text-left"
@@ -289,8 +327,22 @@ export default function ChatPage() {
 
             <div className="border-t border-gray-200 p-4">
               <div className="flex items-center space-x-3">
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <button
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  onClick={() => document.getElementById("fileUpload")?.click()}
+                >
                   <Plus className="w-5 h-5" />
+                  <input
+                    id="fileUpload"
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setSelectedFile(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                  />
                 </button>
                 <div className="flex-1 relative">
                   <input
@@ -302,9 +354,14 @@ export default function ChatPage() {
                     className="w-full px-4 py-3 text-black border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+                {selectedFile && (
+                  <div className="text-sm text-gray-500 mb-2">
+                    📎 แนบไฟล์: {selectedFile.name}
+                  </div>
+                )}
                 <button
                   onClick={handleSendMessage}
-                  disabled={!message.trim()}
+                  disabled={!message.trim()&&!selectedFile}
                   className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ArrowUp className="w-5 h-5" />
