@@ -272,42 +272,49 @@ export default function ChatPage() {
                           )}
 
                           <div className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}>
-                            <div
-                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                isCurrentUser
-                                  ? "bg-blue-500 text-white"
-                                  : "bg-white text-gray-800 border border-gray-200"
-                              }`}
-                            >
-                              <p>{msg.text}</p>
-                              {msg.fileUrl && (
-                                <>
-                                  {msg.fileType?.startsWith("image/") && (
-                                    <Image
-                                      src={msg.fileUrl}
-                                      alt="sent image"
-                                      width={200}
-                                      height={200}
-                                      unoptimized
-                                      className="mt-2 rounded-md object-contain"
-                                    />
-                                  )}
+                            <div className="flex flex-col items-end space-y-1">
+                              {/* ✅ Image Message Preview */}
+                              {msg.fileUrl && msg.fileType?.startsWith("image/") && (
+                                <Image
+                                  src={msg.fileUrl}
+                                  alt="sent image"
+                                  width={300}
+                                  height={300}
+                                  unoptimized
+                                  className="rounded-lg object-cover"
+                                />
+                              )}
 
-                                  {(msg.fileType === "application/pdf" || (!msg.fileType?.startsWith("image/") && msg.fileType !== "application/pdf")) && (
+                              {/* ✅ Text and non-image File Bubble */}
+                              {(msg.text || (msg.fileUrl && !msg.fileType?.startsWith("image/"))) && (
+                                <div
+                                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                                    isCurrentUser
+                                      ? "bg-blue-500 text-white"
+                                      : "bg-white text-gray-800 border border-gray-200"
+                                  }`}
+                                >
+                                  {/* ✅ Text */}
+                                  {msg.text && <p>{msg.text}</p>}
+
+                                  {/* ✅ Download link for non-image files */}
+                                  {msg.fileUrl && !msg.fileType?.startsWith("image/") && (
                                     <a
                                       href={msg.fileUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="block mt-2 text-sm text-white hover:underline"
+                                      className="block mt-1 text-sm underline"
                                     >
-                                      📄 เปิดไฟล์แนบ
+                                      📄 ดาวน์โหลดไฟล์แนบ
                                     </a>
                                   )}
-                                </>
+                                </div>
                               )}
+
+                              {/* ✅ Timestamp (always outside the bubble) */}
                               <p
-                                className={`text-xs mt-1 ${
-                                  isCurrentUser ? "text-blue-100 text-right" : "text-gray-500 text-left"
+                                className={`text-xs ${
+                                  isCurrentUser ? "text-black text-right" : "text-gray-400 text-left"
                                 }`}
                               >
                                 {msgDate.toLocaleTimeString("th-TH", {
