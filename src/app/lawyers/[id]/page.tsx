@@ -3,10 +3,12 @@ import type React from "react"
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { MapPin, Phone, Star, User, X, Plus } from "lucide-react"
+import { MapPin, Phone, Star, User, X, Plus, Eye, Heart } from "lucide-react"
 import Image from "next/image"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
+import { HiChevronLeft, HiChevronRight } from "react-icons/hi"
+import Link from "next/link"
 
 interface Location {
   district: string
@@ -53,6 +55,24 @@ interface UserCase {
   note: string
 }
 
+// Updated Article interface to match your model
+interface Article {
+  _id: string
+  poster_id: {
+    _id: string
+    name: string
+    photo?: string
+  }
+  title: string
+  content: string
+  image?: string
+  category: string
+  view_count: number
+  like_count: number // Added by controller
+  createdAt: string
+  updatedAt: string
+}
+
 function isToday(date: Date) {
   const today = new Date()
   return (
@@ -65,13 +85,14 @@ function isToday(date: Date) {
 export default function LawyerProfilePage() {
   const [lawyer, setLawyer] = useState<Lawyer | null>(null)
   const [userCases, setUserCases] = useState<UserCase[]>([])
+  const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [casesLoading, setCasesLoading] = useState(false)
+  const [articlesLoading, setArticlesLoading] = useState(false)
   const params = useParams()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [selectedCaseId, setSelectedCaseId] = useState("")
-  // Changed from single date to date range
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<Date | null>(null)
@@ -80,6 +101,34 @@ export default function LawyerProfilePage() {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [dateSelectionMode, setDateSelectionMode] = useState<"exact" | "range">("exact")
+  const [startIndex, setStartIndex] = useState(0)
+  const [cardsToShow, setCardsToShow] = useState(2)
+
+  // Updated fetch function to use the correct endpoint
+  const fetchLawyerArticles = useCallback(
+    async (lawyerId: string) => {
+      setArticlesLoading(true)
+      try {
+        const response = await fetch(`${backendUrl}/api/v1/article/lawyer/${lawyerId}`, {
+          cache: "no-store",
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            setArticles(result.data)
+          }
+        } else {
+          console.error("Failed to fetch articles:", response.statusText)
+        }
+      } catch (error) {
+        console.error("Error fetching lawyer articles:", error)
+      } finally {
+        setArticlesLoading(false)
+      }
+    },
+    [backendUrl],
+  )
 
   useEffect(() => {
     const fetchLawyer = async () => {
@@ -97,6 +146,8 @@ export default function LawyerProfilePage() {
         if (result.success) {
           console.log("lawyer data: ", result)
           setLawyer(result.data)
+          // Fetch articles using the lawyer's user ID
+          fetchLawyerArticles(result.data._id._id)
         } else {
           router.replace("/not-found")
         }
@@ -107,8 +158,9 @@ export default function LawyerProfilePage() {
         setLoading(false)
       }
     }
+
     fetchLawyer()
-  }, [params.id, router])
+  }, [params.id, router, fetchLawyerArticles])
 
   // Fetch user's cases without lawyer
   const fetchUserCases = useCallback(async () => {
@@ -142,7 +194,6 @@ export default function LawyerProfilePage() {
 
   // Handle case creation redirect
   const handleAddCase = () => {
-    // Store current lawyer ID and return URL in localStorage or URL params
     const returnUrl = `/lawyers/${params.id}`
     router.push(`/case/create?returnUrl=${encodeURIComponent(returnUrl)}`)
   }
@@ -152,29 +203,59 @@ export default function LawyerProfilePage() {
     const urlParams = new URLSearchParams(window.location.search)
     const caseCreated = urlParams.get("caseCreated")
     if (caseCreated === "true") {
-      // Refresh the cases list
       fetchUserCases()
-      // Clean up the URL
       window.history.replaceState({}, document.title, window.location.pathname)
     }
   }, [fetchUserCases])
+
+  // Truncate text helper
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + "..."
+  }
+
+  // Carousel navigation functions
+  const handlePrev = () => {
+    setStartIndex(Math.max(0, startIndex - cardsToShow))
+  }
+
+  const handleNext = () => {
+    setStartIndex(Math.min(articles.length - cardsToShow, startIndex + cardsToShow))
+  }
+
+  // Get visible articles
+  const visibleArticles = articles.slice(startIndex, startIndex + cardsToShow)
+
+  // Update cardsToShow based on screen size (you can also use useEffect with window resize)
+  useEffect(() => {
+    const updateCardsToShow = () => {
+      if (window.innerWidth < 640) {
+        setCardsToShow(1)
+      } else if (window.innerWidth < 1024) {
+        setCardsToShow(2)
+      } else {
+        setCardsToShow(2)
+      }
+    }
+
+    updateCardsToShow()
+    window.addEventListener("resize", updateCardsToShow)
+    return () => window.removeEventListener("resize", updateCardsToShow)
+  }, [])
 
   if (loading) {
     return <div className="text-center p-10 text-gray-500">กำลังโหลดข้อมูล...</div>
   }
 
   if (!lawyer) {
-    return null // fallback for failed fetch
+    return null
   }
 
   const { _id: user } = lawyer
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Updated validation based on date selection mode
     const hasValidDate = dateSelectionMode === "exact" ? selectedDate : startDate
-
     if (!selectedCaseId || !hasValidDate || !selectedTime) {
       const dateError =
         dateSelectionMode === "exact" ? "กรุณาเลือกคดี วันที่ และเวลาที่ต้องการ" : "กรุณาเลือกคดี ช่วงวันที่ และเวลาที่ต้องการ"
@@ -182,7 +263,6 @@ export default function LawyerProfilePage() {
       return
     }
 
-    // Create reservation datetime based on mode
     const primaryDate = dateSelectionMode === "exact" ? selectedDate! : startDate!
     const reservationDateTime = new Date(primaryDate)
     reservationDateTime.setHours(selectedTime.getHours())
@@ -190,7 +270,6 @@ export default function LawyerProfilePage() {
     reservationDateTime.setSeconds(0)
     reservationDateTime.setMilliseconds(0)
 
-    // Updated payload based on date selection mode
     const payload = {
       case_id: selectedCaseId,
       note: details,
@@ -217,24 +296,20 @@ export default function LawyerProfilePage() {
         },
         body: JSON.stringify(payload),
       })
-
       if (!res.ok) {
         const errorData = await res.json()
         alert("เกิดข้อผิดพลาด: " + (errorData.message || res.statusText))
         return
       }
-
       alert("จองขอคำปรึกษาสำเร็จ!")
       setIsOpen(false)
-      // Clear form
       setSelectedCaseId("")
       setSelectedDate(null)
       setStartDate(null)
       setEndDate(null)
       setSelectedTime(null)
       setDetails("")
-      setDateSelectionMode("exact") // Reset to default
-      // Refresh cases list
+      setDateSelectionMode("exact")
       fetchUserCases()
       router.push(`/case/${selectedCaseId}`)
     } catch (error) {
@@ -251,27 +326,23 @@ export default function LawyerProfilePage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({
-          receiver_id: lawyer._id._id, // or just lawyer._id depending on your data shape
-          text:"ผมต้องการขอคำปรึกษาครับ/ค่ะ",
+          receiver_id: lawyer._id._id,
+          text: "ผมต้องการขอคำปรึกษาครับ/ค่ะ",
         }),
-      });
-
+      })
       if (!res.ok) {
-        console.error("Failed to create chat");
-        return;
+        console.error("Failed to create chat")
+        return
       }
-
-      // Redirect to chat page
-      router.push(`/chat`);
+      router.push(`/chat`)
     } catch (err) {
-      console.error("Error starting chat:", err);
+      console.error("Error starting chat:", err)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
-        {/* White container wrapper */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="grid grid-cols-3 gap-8">
             {/* Left Column */}
@@ -279,7 +350,6 @@ export default function LawyerProfilePage() {
               {/* Profile Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <div className="flex flex-col items-center">
-                  {/* Avatar */}
                   <div className="w-28 h-28 mb-4 relative">
                     {user.photo ? (
                       <Image
@@ -296,24 +366,19 @@ export default function LawyerProfilePage() {
                       </div>
                     )}
                   </div>
-                  {/* Name */}
                   <h1 className="text-2xl font-bold text-gray-900 mb-3">{user.name}</h1>
-                  {/* Stars */}
                   <div className="flex gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  {/* Location */}
                   <div className="flex items-center gap-2 mb-6">
                     <MapPin className="w-4 h-4 text-gray-600" />
                     <span className="text-gray-600 text-sm">
                       {user.location.district}, {user.location.province}
                     </span>
                   </div>
-                  {/* Quote */}
                   <p className="text-lg text-gray-600 italic mb-4">{lawyer.slogan}</p>
-                  {/* Specialization Tags */}
                   <div className="flex flex-wrap gap-2 mb-8 justify-center">
                     {[...lawyer.civilCase_specialized, ...lawyer.criminalCase_specialized]
                       .slice(0, 10)
@@ -326,7 +391,6 @@ export default function LawyerProfilePage() {
                         </div>
                       ))}
                   </div>
-                  {/* Contact Button */}
                   <button
                     onClick={handleClick}
                     className="bg-slate-700 text-white px-8 py-3 rounded-full font-medium hover:bg-slate-800 transition-all duration-200 shadow-md hover:shadow-lg"
@@ -335,6 +399,7 @@ export default function LawyerProfilePage() {
                   </button>
                 </div>
               </div>
+
               {/* Bio Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">เกี่ยวกับ {user.name}</h2>
@@ -365,6 +430,7 @@ export default function LawyerProfilePage() {
                 </div>
               </div>
             </div>
+
             {/* Right Column */}
             <div className="col-span-2 space-y-6">
               {/* License Card */}
@@ -385,6 +451,7 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
               </div>
+
               {/* Consultation Rates Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h3 className="font-bold text-gray-900 text-xl mb-6">อัตราค่าปรึกษากฎหมาย</h3>
@@ -405,27 +472,110 @@ export default function LawyerProfilePage() {
                   )}
                 </div>
               </div>
-              {/* บทความ Card */}
+
+              {/* Articles Card - Updated with carousel */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-                <h3 className="font-bold text-gray-900 text-xl mb-6">บทความ</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-gray-900 text-xl">บทความ</h3>
+                  <span className="text-gray-500 text-sm">({articles.length} บทความ)</span>
+                </div>
+
+                {articlesLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500">กำลังโหลดบทความ...</div>
+                  </div>
+                ) : articles.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 mb-2">ยังไม่มีบทความ</div>
+                    <p className="text-gray-400 text-sm">ทนายยังไม่ได้เผยแพร่บทความใดๆ</p>
+                  </div>
+                ) : (
+                  <section className="relative">
+                    {/* Navigation Buttons */}
+                    {articles.length > cardsToShow && (
+                      <>
+                        <button
+                          onClick={handlePrev}
+                          disabled={startIndex === 0}
+                          className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-slate-700 text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <HiChevronLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <button
+                          onClick={handleNext}
+                          disabled={startIndex + cardsToShow >= articles.length}
+                          className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-slate-700 text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <HiChevronRight className="w-5 h-5 text-white" />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Responsive Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 px-12">
+                      {visibleArticles.map((article) => (
+                        <Link
+                          key={article._id}
+                          href={`/articles/${article._id}`}
+                          className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-200 h-full flex flex-col"
+                        >
+                          <Image
+                            src={article.image || "/placeholder.svg?height=200&width=400&query=legal article"}
+                            alt={article.title}
+                            width={400}
+                            height={200}
+                            unoptimized
+                            className="object-cover w-full h-48"
+                          />
+                          <div className="p-4 flex flex-col flex-grow">
+                            <div className="flex justify-between items-start mb-2">
+                              <h2 className="text-lg font-semibold text-gray-900 line-clamp-2 flex-grow">
+                                {article.title}
+                              </h2>
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0">
+                                {article.category}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600 line-clamp-3 flex-grow mb-4">
+                              {truncateText(article.content, 120)}
+                            </p>
+                            <div className="border-t border-gray-200 pt-3 text-sm text-gray-500 flex justify-between items-center">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                  <Eye className="w-3 h-3" />
+                                  <span>{article.view_count}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Heart className="w-3 h-3" />
+                                  <span>{article.like_count}</span>
+                                </div>
+                              </div>
+                              <span>
+                                {new Date(article.createdAt).toLocaleString("th-TH", {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
-              {/* forum Rates Card */}
-              <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-                <h3 className="font-bold text-gray-900 text-xl mb-6">ให้คำปรึกษา</h3>
-              </div>
+
               {/* Reviews Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300 relative">
                 <div className="flex items-center gap-2 mb-6">
                   <h2 className="text-xl font-bold text-gray-900">รีวิว</h2>
                   <span className="text-gray-500">(1)</span>
                 </div>
-                {/* Stars */}
                 <div className="flex gap-1 mb-8">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
                   ))}
                 </div>
-                {/* Review */}
                 <div className="flex gap-4 mb-8">
                   <div className="w-16 h-16 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
                     <div className="text-2xl">👨‍💼</div>
@@ -439,6 +589,7 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
               </div>
+
               {/* Contact Button */}
               <div className="fixed bottom-12 right-12 z-20">
                 <button
@@ -451,7 +602,8 @@ export default function LawyerProfilePage() {
                   </div>
                 </button>
               </div>
-              {/* Modal Overlay */}
+
+              {/* Modal Overlay - keeping the existing modal code */}
               {isOpen && (
                 <div
                   className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
@@ -465,7 +617,6 @@ export default function LawyerProfilePage() {
                       <X className="w-5 h-5" />
                     </button>
                     <h2 className="text-xl text-black font-bold mb-4 text-center">จองขอคำปรึกษา</h2>
-                    {/* Reservation Form */}
                     <form className="space-y-4" onSubmit={handleSubmit}>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">เลือกคดีของคุณ</label>
@@ -494,7 +645,6 @@ export default function LawyerProfilePage() {
                                 ))
                               )}
                             </select>
-                            {/* Add Case Button */}
                             <button
                               type="button"
                               onClick={handleAddCase}
@@ -506,7 +656,6 @@ export default function LawyerProfilePage() {
                           </>
                         )}
                       </div>
-                      {/* Date Selection Mode Toggle */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-3">ประเภทการเลือกวันที่</label>
                         <div className="flex gap-4 mb-4">
@@ -519,7 +668,6 @@ export default function LawyerProfilePage() {
                               checked={dateSelectionMode === "exact"}
                               onChange={() => {
                                 setDateSelectionMode("exact")
-                                // Clear range dates when switching to exact
                                 setStartDate(null)
                                 setEndDate(null)
                               }}
@@ -535,7 +683,6 @@ export default function LawyerProfilePage() {
                               checked={dateSelectionMode === "range"}
                               onChange={() => {
                                 setDateSelectionMode("range")
-                                // Clear exact date when switching to range
                                 setSelectedDate(null)
                               }}
                               className="mr-2"
@@ -543,8 +690,6 @@ export default function LawyerProfilePage() {
                             <span className="text-sm text-gray-700">ช่วงวันที่</span>
                           </label>
                         </div>
-
-                        {/* Conditional Date Picker based on mode */}
                         {dateSelectionMode === "exact" ? (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">วันที่ต้องการ</label>
@@ -596,7 +741,7 @@ export default function LawyerProfilePage() {
                       {dateSelectionMode === "exact" && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700">เวลาที่ต้องการ</label>
-                            <DatePicker
+                          <DatePicker
                             selected={selectedTime}
                             onChange={(time) => setSelectedTime(time)}
                             showTimeSelect
@@ -610,12 +755,12 @@ export default function LawyerProfilePage() {
                             minTime={(() => {
                               const referenceDate = selectedDate
                               return referenceDate && isToday(referenceDate)
-                              ? new Date()
-                              : new Date(new Date().setHours(8, 0))
+                                ? new Date()
+                                : new Date(new Date().setHours(8, 0))
                             })()}
                             maxTime={new Date(new Date().setHours(18, 0))}
-                            />
-                          </div>
+                          />
+                        </div>
                       )}
                       <div>
                         <label className="block text-sm font-medium text-gray-700">รายละเอียดเพิ่มเติม</label>

@@ -2,11 +2,11 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import ShareButton from "@/components/ShareButton"
 import ArticleLikeButton from "@/components/article-like-button"
+import ArticleMenu from "@/components/article-menu"
 import { Eye, Heart, ArrowLeft } from "lucide-react"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions"
 import Link from "next/link"
-// Removed: import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 type ArticleItem = {
   _id: string
@@ -21,7 +21,7 @@ type ArticleItem = {
   poster_id?: {
     _id: string
     name: string
-    photo?: string // optional if you plan to use a photo later
+    photo?: string
   }
 }
 
@@ -65,13 +65,28 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
   const session = await getServerSession(authOptions)
   console.log("check session", session?.accessToken)
 
-  if (!articleItem) return notFound() // [^1]
+  if (!articleItem) return notFound()
 
   // Check if user has liked this article item
   let initiallyLiked = false
   if (session?.accessToken) {
     initiallyLiked = await checkIfArticleLiked(params.id, session.accessToken)
   }
+
+  // Check if current user is the owner of the article
+  // const isOwner = session?.user?.id === articleItem.poster_id?._id
+
+  // const handleEdit = () => {
+  //   // Implement edit functionality
+  //   console.log("Edit article:", articleItem._id)
+  //   // You can redirect to edit page or open edit modal
+  // }
+
+  // const handleDelete = () => {
+  //   // Implement delete functionality
+  //   console.log("Delete article:", articleItem._id)
+  //   // You can show confirmation dialog and then delete
+  // }
 
   return (
     <main className="min-h-screen bg-[#1A2341] text-white px-6 py-10">
@@ -85,11 +100,16 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
             </button>
           </Link>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* บทความหลัก */}
           <section className="md:col-span-2 bg-white text-black rounded-xl p-6 shadow-lg">
-            {/* Article Title moved here */}
-            <h1 className="text-2xl md:text-3xl font-semibold mb-4">{articleItem.title}</h1>
+            {/* Article Header with Title and Menu */}
+            <div className="flex justify-between items-start mb-4">
+              <h1 className="text-2xl md:text-3xl font-semibold flex-1 pr-4">{articleItem.title}</h1>
+              <ArticleMenu articleId={articleItem._id} authorId={articleItem.poster_id?._id || ""} />
+            </div>
+
             {/* Combined Poster Info and Post Date */}
             <div className="flex justify-between items-center text-xs text-gray-500 my-5 px-16">
               <div className="flex items-center gap-4">
@@ -148,6 +168,7 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                 </div>
               </div>
             </div>
+
             <div
               className="relative w-full max-w-2xl h-80 mx-auto rounded-2xl overflow-hidden mb-12"
               style={{ paddingTop: "56.25%" }}
@@ -161,7 +182,9 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
                 sizes="(max-width: 768px) 100vw, 1024px"
               />
             </div>
+
             <p className="text-sm text-gray-700 whitespace-pre-line px-16">{articleItem.content}</p>
+
             {/* แสดงหมวดหมู่ */}
             {articleItem.category && (
               <div className="mt-14 px-16">
@@ -171,6 +194,7 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
               </div>
             )}
           </section>
+
           {/* แถบด้านข้าง */}
           <OtherArticles currentId={articleItem._id} />
         </div>
@@ -185,7 +209,9 @@ async function OtherArticles({ currentId }: { currentId: string }) {
     cache: "no-store",
   })
   const data = await res.json()
+
   if (!data.success) return null
+
   const otherArticles: ArticleItem[] = data.data.filter((item: ArticleItem) => item._id !== currentId).slice(0, 5)
 
   return (

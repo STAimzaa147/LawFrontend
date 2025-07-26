@@ -123,6 +123,7 @@ export default function CreateArticlePage() {
       const data = await res.json()
       if (data.success) {
         router.push("/articles")
+        router.refresh()
       } else {
         setError(data.message || "ไม่สามารถสร้างบทความได้")
       }
