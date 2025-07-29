@@ -5,9 +5,10 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
-import { X, Camera, Tag } from 'lucide-react'
+import { X, Camera, Tag, Trash2 } from "lucide-react" // Added Trash2 icon
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button" // Ensure Button is imported
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
@@ -29,10 +30,16 @@ type FormDataType = {
   category: string
 }
 
+type ApiResponse<T> = {
+  success: boolean
+  data?: T
+  message?: string
+}
+
 const newsCategories = [
   { value: "", label: "เลือกหมวดหมู่" },
   { value: "ข่าวกฎหมายใหม่", label: "ข่าวกฎหมายใหม่" },
-  { value: "การตีความกฎหมาย", label: "การตีความกฎหมาย" },
+  { value: "การตีค���ามกฎหมาย", label: "การตีความกฎหมาย" },
   { value: "คดีความสำคัญ", label: "คดีความสำคัญ" },
   { value: "กฎหมายแรงงาน", label: "กฎหมายแรงงาน" },
   { value: "กฎหมายธุรกิจ", label: "กฎหมายธุรกิจ" },
@@ -54,7 +61,8 @@ export default function EditNewsPage() {
   const [newImage, setNewImage] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(false) // For save action
+  const [deleting, setDeleting] = useState(false) // For delete action
   const [newsItem, setNewsItem] = useState<NewsItem | null>(null) // Keep this to store the fetched item
 
   useEffect(() => {
@@ -64,24 +72,20 @@ export default function EditNewsPage() {
         return
       }
       try {
-        // FIX: Changed from apiFetch to native fetch for GET request
         const response = await fetch(`${backendUrl}/api/v1/news/${id}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session.accessToken}`,
           },
         })
-
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+          const errorData = await response.json()
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
         }
-
-        const data = await response.json()
-
-        if (data.success) {
-          const item: NewsItem = data.data
+        const data: ApiResponse<NewsItem> = await response.json() // Explicitly type data
+        if (data.success && data.data) {
+          const item: NewsItem = data.data // Use data.data
           setNewsItem(item) // Store the fetched item
           setFormData({ title: item.title, content: item.content, category: item.category })
           setCurrentImage(item.image)
@@ -145,25 +149,18 @@ export default function EditNewsPage() {
         // If user explicitly removed the image, send an empty string to clear it on backend
         form.append("image", "")
       }
-
-      // FIX: Changed from apiFetch to native fetch for PUT request
       const response = await fetch(`${backendUrl}/api/v1/news/${id}`, {
         method: "PUT",
         headers: {
-          // When sending FormData, fetch automatically sets Content-Type: multipart/form-data
-          // Do NOT manually set Content-Type for FormData, as it will break the boundary
-          "Authorization": `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: form, // Pass FormData directly as body
       })
-
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json()
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
       }
-
-      const data = await response.json()
-
+      const data: ApiResponse<NewsItem> = await response.json() // Explicitly type data
       if (data.success) {
         toast({ title: "บันทึกสำเร็จ", description: "ข่าวถูกอัปเดตเรียบร้อยแล้ว" })
         router.push("/admin/news")
@@ -177,8 +174,57 @@ export default function EditNewsPage() {
     }
   }
 
+  // Function to handle news deletion
+  const handleDeleteNews = async () => {
+    if (!session?.accessToken) {
+      return toast({ title: "คุณยังไม่ได้เข้าสู่ระบบ", variant: "destructive" })
+    }
+    if (!confirm("คุณแน่ใจหรือไม่ที่จะลบข่าวนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้")) {
+      return
+    }
+    try {
+      setDeleting(true)
+      const response = await fetch(`${backendUrl}/api/v1/news/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      }
+
+      const data: ApiResponse<any> = await response.json() // Explicitly type data
+      if (data.success) {
+        toast({ title: "ลบสำเร็จ", description: "ข่าวถูกลบเรียบร้อยแล้ว" })
+        router.push("/admin/news")
+      } else {
+        toast({
+          title: "ไม่สามารถลบ",
+          description: data.message || "เกิดข้อผิดพลาดในการลบข่าว",
+          variant: "destructive",
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: err.message || "ไม่สามารถลบข่าวได้",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) {
-    return <div className="fixed inset-0 bg-slate-800 bg-opacity-95 flex items-center justify-center text-white text-xl">กำลังโหลด...</div>
+    return (
+      <div className="fixed inset-0 bg-slate-800 bg-opacity-95 flex items-center justify-center text-white text-xl">
+        กำลังโหลด...
+      </div>
+    )
   }
 
   return (
@@ -191,10 +237,14 @@ export default function EditNewsPage() {
             </div>
             <h2 className="text-lg font-semibold text-gray-900">{session?.user?.name}</h2>
           </div>
-          <button onClick={() => router.back()} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+          <button
+            onClick={() => router.back()}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+          >
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
+
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           <input
             name="title"
@@ -245,20 +295,39 @@ export default function EditNewsPage() {
             </select>
           </div>
         </form>
+
         <div className="flex items-center justify-between p-6 border-t border-gray-100 bg-gray-50">
           <label className="cursor-pointer flex items-center gap-2 text-gray-600 hover:text-gray-800">
             <Camera className="w-5 h-5" />
             <span className="text-sm font-medium">เปลี่ยนรูปภาพ</span>
             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
           </label>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={saving}
-            className="px-6 py-2 bg-slate-700 text-white rounded-full hover:bg-slate-800 font-medium"
-          >
-            {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
-          </button>
+          <div className="flex gap-2">
+            {" "}
+            {/* Group buttons */}
+            <Button
+              onClick={handleDeleteNews}
+              disabled={deleting || saving} // Disable if saving or deleting
+              variant="destructive"
+              className="bg-red-600 text-white hover:bg-red-700 px-6 py-2 rounded-full"
+            >
+              {deleting ? (
+                "กำลังลบ..."
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> ลบ
+                </>
+              )}
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={saving || deleting} // Disable if saving or deleting
+              className="px-6 py-2 bg-slate-700 text-white rounded-full hover:bg-slate-800 font-medium"
+            >
+              {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
