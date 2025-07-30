@@ -9,6 +9,7 @@ import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi"
 import Link from "next/link"
+import ReviewMenu from "../../../components/review-menu"
 
 interface Location {
   district: string
@@ -73,6 +74,25 @@ interface Article {
   updatedAt: string
 }
 
+// Add Review interface
+interface Review {
+  _id: string
+  user_id: {
+    _id: string
+    name: string
+    photo?: string
+  }
+  lawyer_id: string
+  rating: number
+  comment: string
+  case_id?: {
+    _id: string
+    title: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 function isToday(date: Date) {
   const today = new Date()
   return (
@@ -86,9 +106,11 @@ export default function LawyerProfilePage() {
   const [lawyer, setLawyer] = useState<Lawyer | null>(null)
   const [userCases, setUserCases] = useState<UserCase[]>([])
   const [articles, setArticles] = useState<Article[]>([])
+  const [reviews, setReviews] = useState<Review[]>([]) // Add reviews state
   const [loading, setLoading] = useState(true)
   const [casesLoading, setCasesLoading] = useState(false)
   const [articlesLoading, setArticlesLoading] = useState(false)
+  const [reviewsLoading, setReviewsLoading] = useState(false) // Add reviews loading state
   const params = useParams()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -103,6 +125,45 @@ export default function LawyerProfilePage() {
   const [dateSelectionMode, setDateSelectionMode] = useState<"exact" | "range">("exact")
   const [startIndex, setStartIndex] = useState(0)
   const [cardsToShow, setCardsToShow] = useState(2)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState("")
+  const [reviewCaseId, setReviewCaseId] = useState("")
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [editingReview, setEditingReview] = useState<Review | null>(null)
+
+  // Add function to fetch reviews
+  const fetchLawyerReviews = useCallback(
+    async (lawyerId: string) => {
+      setReviewsLoading(true)
+      try {
+        const response = await fetch(`${backendUrl}/api/v1/review/lawyer/${lawyerId}`, {
+          cache: "no-store",
+        })
+        if (response.ok) {
+          const result = await response.json()
+          console.log("Reviews API response:", result) // Debug log
+          if (result.success && result.data) {
+            // Ensure result.data is an array
+            const reviewsData = Array.isArray(result.data) ? result.data : []
+            setReviews(reviewsData)
+          } else {
+            console.log("No reviews data or unsuccessful response")
+            setReviews([])
+          }
+        } else {
+          console.error("Failed to fetch reviews:", response.statusText)
+          setReviews([])
+        }
+      } catch (error) {
+        console.error("Error fetching lawyer reviews:", error)
+        setReviews([])
+      } finally {
+        setReviewsLoading(false)
+      }
+    },
+    [backendUrl],
+  )
 
   // Updated fetch function to use the correct endpoint
   const fetchLawyerArticles = useCallback(
@@ -112,7 +173,6 @@ export default function LawyerProfilePage() {
         const response = await fetch(`${backendUrl}/api/v1/article/lawyer/${lawyerId}`, {
           cache: "no-store",
         })
-
         if (response.ok) {
           const result = await response.json()
           if (result.success && result.data) {
@@ -148,6 +208,8 @@ export default function LawyerProfilePage() {
           setLawyer(result.data)
           // Fetch articles using the lawyer's user ID
           fetchLawyerArticles(result.data._id._id)
+          // Fetch reviews using the lawyer's user ID
+          fetchLawyerReviews(result.data._id._id)
         } else {
           router.replace("/not-found")
         }
@@ -158,9 +220,8 @@ export default function LawyerProfilePage() {
         setLoading(false)
       }
     }
-
     fetchLawyer()
-  }, [params.id, router, fetchLawyerArticles])
+  }, [params.id, router, fetchLawyerArticles, fetchLawyerReviews])
 
   // Fetch user's cases without lawyer
   const fetchUserCases = useCallback(async () => {
@@ -237,11 +298,74 @@ export default function LawyerProfilePage() {
         setCardsToShow(2)
       }
     }
-
     updateCardsToShow()
     window.addEventListener("resize", updateCardsToShow)
     return () => window.removeEventListener("resize", updateCardsToShow)
   }, [])
+
+  // Calculate average rating
+  const averageRating =
+    Array.isArray(reviews) && reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviews.length
+      : 0
+
+  // Render star rating
+  const renderStars = (rating: number, size = "w-5 h-5") => {
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        className={`${size} ${i < Math.floor(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+      />
+    ))
+  }
+
+  // Review menu handlers
+  const handleEditReview = (review: Review) => {
+    setEditingReview(review)
+    setReviewRating(review.rating)
+    setReviewComment(review.comment)
+    setReviewCaseId(review.case_id?._id || "")
+    setShowReviewModal(true)
+  }
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!session?.accessToken) {
+      alert("กรุณาเข้าสู่ระบบ")
+      return
+    }
+
+    if (!confirm("คุณแน่ใจหรือไม่ที่จะลบรีวิวนี้?")) {
+      return
+    }
+
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/review/${reviewId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        alert("เกิดข้อผิดพลาด: " + (errorData.message || res.statusText))
+        return
+      }
+
+      alert("ลบรีวิวสำเร็จ!")
+      // Refresh reviews
+      if (lawyer) {
+        fetchLawyerReviews(lawyer._id._id)
+      }
+    } catch (error) {
+      alert("เกิดข้อผิดพลาด: " + error)
+    }
+  }
+
+  const handleReportReview = (reviewId: string) => {
+    // Implement report functionality
+    alert("รายงานรีวิวเรียบร้อยแล้ว : " + {reviewId})
+  }
 
   if (loading) {
     return <div className="text-center p-10 text-gray-500">กำลังโหลดข้อมูล...</div>
@@ -340,6 +464,60 @@ export default function LawyerProfilePage() {
     }
   }
 
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!session?.accessToken) {
+      alert("กรุณาเข้าสู่ระบบก่อนให้รีวิว")
+      return
+    }
+    if (reviewRating === 0) {
+      alert("กรุณาให้คะแนน")
+      return
+    }
+
+    setSubmittingReview(true)
+    try {
+      const payload = {
+        lawyer_id: lawyer._id._id,
+        rating: reviewRating,
+        comment: reviewComment,
+        ...(reviewCaseId && { case_id: reviewCaseId }),
+      }
+
+      const url = editingReview ? `${backendUrl}/api/v1/review/${editingReview._id}` : `${backendUrl}/api/v1/review`
+
+      const method = editingReview ? "PUT" : "POST"
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        alert("เกิดข้อผิดพลาด: " + (errorData.message || res.statusText))
+        return
+      }
+
+      alert(editingReview ? "แก้ไขรีวิวสำเร็จ!" : "ส่งรีวิวสำเร็จ!")
+      setShowReviewModal(false)
+      setReviewRating(0)
+      setReviewComment("")
+      setReviewCaseId("")
+      setEditingReview(null)
+      // Refresh reviews
+      fetchLawyerReviews(lawyer._id._id)
+    } catch (error) {
+      alert("เกิดข้อผิดพลาด: " + error)
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
@@ -367,10 +545,9 @@ export default function LawyerProfilePage() {
                     )}
                   </div>
                   <h1 className="text-2xl font-bold text-gray-900 mb-3">{user.name}</h1>
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    ))}
+                  <div className="flex gap-1 mb-2">{renderStars(averageRating)}</div>
+                  <div className="text-sm text-gray-600 mb-4">
+                    {averageRating > 0 ? `${averageRating.toFixed(1)} จาก ${reviews.length} รีวิว` : "ยังไม่มีรีวิว"}
                   </div>
                   <div className="flex items-center gap-2 mb-6">
                     <MapPin className="w-4 h-4 text-gray-600" />
@@ -399,7 +576,6 @@ export default function LawyerProfilePage() {
                   </button>
                 </div>
               </div>
-
               {/* Bio Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">เกี่ยวกับ {user.name}</h2>
@@ -430,7 +606,6 @@ export default function LawyerProfilePage() {
                 </div>
               </div>
             </div>
-
             {/* Right Column */}
             <div className="col-span-2 space-y-6">
               {/* License Card */}
@@ -451,7 +626,6 @@ export default function LawyerProfilePage() {
                   </div>
                 </div>
               </div>
-
               {/* Consultation Rates Card */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <h3 className="font-bold text-gray-900 text-xl mb-6">อัตราค่าปรึกษากฎหมาย</h3>
@@ -472,14 +646,12 @@ export default function LawyerProfilePage() {
                   )}
                 </div>
               </div>
-
               {/* Articles Card - Updated with carousel */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-bold text-gray-900 text-xl">บทความ</h3>
                   <span className="text-gray-500 text-sm">({articles.length} บทความ)</span>
                 </div>
-
                 {articlesLoading ? (
                   <div className="text-center py-8">
                     <div className="text-gray-500">กำลังโหลดบทความ...</div>
@@ -510,7 +682,6 @@ export default function LawyerProfilePage() {
                         </button>
                       </>
                     )}
-
                     {/* Responsive Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 px-12">
                       {visibleArticles.map((article) => (
@@ -564,32 +735,110 @@ export default function LawyerProfilePage() {
                   </section>
                 )}
               </div>
-
-              {/* Reviews Card */}
+              {/* Reviews Card - Updated with ReviewMenu */}
               <div className="bg-gray-50 rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300 relative">
-                <div className="flex items-center gap-2 mb-6">
-                  <h2 className="text-xl font-bold text-gray-900">รีวิว</h2>
-                  <span className="text-gray-500">(1)</span>
-                </div>
-                <div className="flex gap-1 mb-8">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-6 h-6 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <div className="flex gap-4 mb-8">
-                  <div className="w-16 h-16 bg-green-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                    <div className="text-2xl">👨‍💼</div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-gray-900">รีวิว</h2>
+                      <span className="text-gray-500">({reviews.length})</span>
+                    </div>
+                    {reviews.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">{renderStars(averageRating, "w-5 h-5")}</div>
+                        <span className="text-lg font-semibold text-gray-900">{averageRating.toFixed(1)}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 mb-2">บริการอย่างมืออาชีพยอดเยี่ยม</h4>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {lawyer.summary.length > 100 ? lawyer.summary.substring(0, 100) + "..." : lawyer.summary}
-                    </p>
-                    <button className="text-blue-500 text-sm mt-2 hover:underline transition-colors">อ่านเพิ่มเติม</button>
-                  </div>
+                  {session && (
+                    <button
+                      onClick={() => {
+                        setEditingReview(null)
+                        setReviewRating(0)
+                        setReviewComment("")
+                        setReviewCaseId("")
+                        setShowReviewModal(true)
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      <Star className="w-4 h-4" />
+                      เขียนรีวิว
+                    </button>
+                  )}
                 </div>
+                {reviewsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500">กำลังโหลดรีวิว...</div>
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 mb-2">ยังไม่มีรีวิว</div>
+                    <p className="text-gray-400 text-sm">ยังไม่มีลูกค้าให้รีวิวทนายท่านนี้</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-6 max-h-[600px] overflow-y-auto">
+                      {Array.isArray(reviews) && reviews.length > 0 ? (
+                        reviews.map((review) => (
+                          <div key={review._id} className="bg-white rounded-lg p-4 shadow-sm">
+                            <div className="flex gap-4">
+                              <div className="w-12 h-12 flex-shrink-0">
+                                {review.user_id?.photo ? (
+                                  <Image
+                                    src={review.user_id.photo || "/placeholder.svg"}
+                                    alt={review.user_id.name || "Client"}
+                                    width={48}
+                                    height={48}
+                                    unoptimized
+                                    className="w-full h-full rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full rounded-full bg-green-400 flex items-center justify-center">
+                                    <div className="text-lg">👤</div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-semibold text-gray-900">{review.user_id?.name || "Anonymous"}</h4>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(review.createdAt).toLocaleDateString("th-TH", {
+                                        year: "numeric",
+                                        month: "short",
+                                        day: "numeric",
+                                      })}
+                                    </span>
+                                    {session && (
+                                      <ReviewMenu
+                                        isOwner={session.user?.id === review.user_id?._id}
+                                        onEdit={() => handleEditReview(review)}
+                                        onDelete={() => handleDeleteReview(review._id)}
+                                        onReport={() => handleReportReview(review._id)}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 mb-2">{renderStars(review.rating || 0, "w-4 h-4")}</div>
+                                {review.case_id && (
+                                  <div className="text-xs text-blue-600 mb-2 bg-blue-50 px-2 py-1 rounded inline-block">
+                                    คดี: {review.case_id.title}
+                                  </div>
+                                )}
+                                <p className="text-gray-700 text-sm leading-relaxed">
+                                  {review.comment || "ไม่มีความคิดเห็น"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">ไม่มีรีวิวที่จะแสดง</div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
-
               {/* Contact Button */}
               <div className="fixed bottom-12 right-12 z-20">
                 <button
@@ -602,7 +851,6 @@ export default function LawyerProfilePage() {
                   </div>
                 </button>
               </div>
-
               {/* Modal Overlay - keeping the existing modal code */}
               {isOpen && (
                 <div
@@ -779,6 +1027,113 @@ export default function LawyerProfilePage() {
                       >
                         ยืนยันการจอง
                       </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+              {/* Review Modal */}
+              {showReviewModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                  <div className="bg-white w-full max-w-md mx-4 rounded-xl shadow-lg p-6 relative">
+                    <button
+                      className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+                      onClick={() => {
+                        setShowReviewModal(false)
+                        setEditingReview(null)
+                        setReviewRating(0)
+                        setReviewComment("")
+                        setReviewCaseId("")
+                      }}
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <h2 className="text-xl text-black font-bold mb-4 text-center">
+                      {editingReview ? "แก้ไขรีวิว" : "เขียนรีวิว"}
+                    </h2>
+                    <p className="text-gray-600 text-sm text-center mb-6">
+                      {editingReview ? "แก้ไขรีวิวของคุณ" : `แบ่งปันประสบการณ์ของคุณกับ ${user.name}`}
+                    </p>
+                    <form className="space-y-4" onSubmit={handleSubmitReview}>
+                      {/* Rating Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">ให้คะแนน</label>
+                        <div className="flex gap-1 justify-center mb-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewRating(star)}
+                              className="focus:outline-none"
+                            >
+                              <Star
+                                className={`w-8 h-8 ${
+                                  star <= reviewRating
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300 hover:text-yellow-300"
+                                } transition-colors`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-center text-sm text-gray-500">
+                          {reviewRating === 0 && "คลิกเพื่อให้คะแนน"}
+                          {reviewRating === 1 && "แย่มาก"}
+                          {reviewRating === 2 && "แย่"}
+                          {reviewRating === 3 && "ปานกลาง"}
+                          {reviewRating === 4 && "ดี"}
+                          {reviewRating === 5 && "ดีเยี่ยม"}
+                        </p>
+                      </div>
+                      {/* Case Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">เลือกคดี (ไม่บังคับ)</label>
+                        <select
+                          className="text-gray-600 w-full border rounded-md px-3 py-2"
+                          value={reviewCaseId}
+                          onChange={(e) => setReviewCaseId(e.target.value)}
+                        >
+                          <option value="">ไม่ระบุคดี</option>
+                          {userCases.map((userCase) => (
+                            <option key={userCase._id} value={userCase._id}>
+                              {userCase.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Comment */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">ความคิดเห็น</label>
+                        <textarea
+                          className="text-gray-600 w-full border rounded-md px-3 py-2"
+                          rows={4}
+                          value={reviewComment}
+                          onChange={(e) => setReviewComment(e.target.value)}
+                          placeholder="แบ่งปันประสบการณ์ของคุณ..."
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReviewModal(false)
+                            setEditingReview(null)
+                            setReviewRating(0)
+                            setReviewComment("")
+                            setReviewCaseId("")
+                          }}
+                          className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-md hover:bg-gray-300 transition-colors"
+                          disabled={submittingReview}
+                        >
+                          ยกเลิก
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          disabled={reviewRating === 0 || submittingReview}
+                        >
+                          {submittingReview ? "กำลังส่ง..." : editingReview ? "บันทึกการแก้ไข" : "ส่งรีวิว"}
+                        </button>
+                      </div>
                     </form>
                   </div>
                 </div>

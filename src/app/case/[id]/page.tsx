@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -26,16 +25,40 @@ import {
   X,
   Plus,
   Upload,
+  CalendarDays,
 } from "lucide-react"
 
 interface Lawyer {
-  _id: string;
-  name: string;
-  email:string;
-  photo?: string;
-  specialization?: string[];
+  _id: string
+  name: string
+  email: string
+  photo?: string
+  specialization?: string[]
 }
 
+interface Appointment {
+  _id: string
+  case_id: string
+  client_id: {
+    _id: string
+    name: string
+    email: string
+    photo?: string
+  }
+  lawyer_id: {
+    _id: string
+    name: string
+    email: string
+    photo?: string
+  }
+  timeStamp: string
+  status: "pending" | "confirmed" | "cancelled" | "completed"
+  title?: string
+  description?: string
+  location?: string
+  createdAt: string
+  updatedAt: string
+}
 
 type CaseDetails = {
   _id: string
@@ -48,12 +71,12 @@ type CaseDetails = {
   lawyer_id?: Lawyer
   offered_Lawyers: Lawyer[]
   category_type: "civil" | "criminal" | "unknown"
-  title:string
+  title: string
   description: string
   consultation_date?: string
   consultation_status: "pending" | "cancelled" | "confirmed" | "rejected"
   note: string
-  summons? : string
+  summons?: string
   files?: string[]
   createdAt: string
   updatedAt: string
@@ -66,7 +89,9 @@ export default function CaseDetailsPage() {
   const params = useParams()
   const { data: session } = useSession()
   const [caseData, setCaseData] = useState<CaseDetails | null>(null)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true)
   const [error, setError] = useState("")
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -78,6 +103,7 @@ export default function CaseDetailsPage() {
 
   const caseId = params.id as string
 
+  // Fetch case details
   useEffect(() => {
     const fetchCaseDetails = async () => {
       try {
@@ -109,6 +135,34 @@ export default function CaseDetailsPage() {
     }
   }, [session?.accessToken, caseId])
 
+  // Fetch appointments for this case
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setAppointmentsLoading(true)
+        const res = await fetch(`${backendUrl}/api/v1/appointment/case/${caseId}`, {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        })
+        const data = await res.json()
+        if (data.success) {
+          setAppointments(data.data)
+        } else {
+          console.error("Failed to fetch appointments:", data.message)
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error)
+      } finally {
+        setAppointmentsLoading(false)
+      }
+    }
+
+    if (session?.accessToken && caseId) {
+      fetchAppointments()
+    }
+  }, [session?.accessToken, caseId])
+
   const handleDelete = async () => {
     const confirmed = confirm("คุณแน่ใจหรือไม่ที่จะลบคดีนี้? การกระทำนี้ไม่สามารถยกเลิกได้")
     if (!confirmed) return
@@ -121,7 +175,6 @@ export default function CaseDetailsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       })
-
       if (res.ok) {
         router.push("/case")
       } else {
@@ -145,13 +198,13 @@ export default function CaseDetailsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({
-          title:editedTitle,
+          title: editedTitle,
           description: editedDescription,
         }),
       })
       const data = await res.json()
       if (data.success) {
-        setCaseData((prev) => (prev ? { ...prev,title: editedTitle, description: editedDescription } : null))
+        setCaseData((prev) => (prev ? { ...prev, title: editedTitle, description: editedDescription } : null))
         setIsEditing(false)
       } else {
         alert("ไม่สามารถบันทึกการเปลี่ยนแปลงได้")
@@ -219,7 +272,7 @@ export default function CaseDetailsPage() {
     if (!confirmed) return
 
     setDeletingFileIndex(fileIndex)
-    console.log("index : ",fileIndex)
+    console.log("index : ", fileIndex)
     try {
       const res = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}/file?idx=${fileIndex}`, {
         method: "DELETE",
@@ -303,6 +356,7 @@ export default function CaseDetailsPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "confirmed":
+      case "completed":
         return "bg-green-100 text-green-800"
       case "pending":
         return "bg-yellow-100 text-yellow-800"
@@ -318,6 +372,8 @@ export default function CaseDetailsPage() {
     switch (status.toLowerCase()) {
       case "confirmed":
         return "ยืนยันแล้ว"
+      case "completed":
+        return "เสร็จสิ้น"
       case "pending":
         return "รอดำเนินการ"
       case "cancelled":
@@ -332,6 +388,7 @@ export default function CaseDetailsPage() {
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case "confirmed":
+      case "completed":
         return <CheckCircle className="w-4 h-4" />
       case "pending":
         return <Clock className="w-4 h-4" />
@@ -353,6 +410,16 @@ export default function CaseDetailsPage() {
     })
   }
 
+  const formatAppointmentDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   function extractFilename(url: string) {
     return url.split("?")[0].split("/").pop() || "download"
   }
@@ -360,56 +427,51 @@ export default function CaseDetailsPage() {
   const isOwner = session?.user?.id === caseData?.client_id._id
 
   const handleAccept = async () => {
-  try {
-    const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.accessToken}`, // if using auth
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      alert("คุณได้ยอมรับคำขอเรียบร้อยแล้ว");
-      router.refresh();
-      // You can also refetch or update UI here
-    } else {
-      console.error(data.message || "เกิดข้อผิดพลาด");
-      alert("การยอมรับคำขอล้มเหลว");
+    try {
+      const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`, // if using auth
+        },
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        alert("คุณได้ยอมรับคำขอเรียบร้อยแล้ว")
+        router.refresh()
+        // You can also refetch or update UI here
+      } else {
+        console.error(data.message || "เกิดข้อผิดพลาด")
+        alert("การยอมรับคำขอล้มเหลว")
+      }
+    } catch (error) {
+      console.error("Error accepting request:", error)
+      alert("เกิดข้อผิดพลาดขณะยอมรับคำขอ")
     }
-  } catch (error) {
-    console.error("Error accepting request:", error);
-    alert("เกิดข้อผิดพลาดขณะยอมรับคำขอ");
   }
-};
 
-const handleReject = async () => {
-  try {
-    const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.accessToken}`, // if using auth
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว");
-      // You can also refetch or update UI here
-    } else {
-      console.error(data.message || "เกิดข้อผิดพลาด");
-      alert("การปฏิเสธคำขอล้มเหลว");
+  const handleReject = async () => {
+    try {
+      const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.accessToken}`, // if using auth
+        },
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว")
+        // You can also refetch or update UI here
+      } else {
+        console.error(data.message || "เกิดข้อผิดพลาด")
+        alert("การปฏิเสธคำขอล้มเหลว")
+      }
+    } catch (error) {
+      console.error("Error rejecting request:", error)
+      alert("เกิดข้อผิดพลาดขณะปฏิเสธคำขอ")
     }
-  } catch (error) {
-    console.error("Error rejecting request:", error);
-    alert("เกิดข้อผิดพลาดขณะปฏิเสธคำขอ");
   }
-};
-
 
   if (!session) {
     return (
@@ -491,7 +553,7 @@ const handleReject = async () => {
         <div className="max-w-6xl mx-auto p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button onClick={() => router.push('/case')} className="text-gray-400 hover:text-white transition">
+              <button onClick={() => router.push("/case")} className="text-gray-400 hover:text-white transition">
                 <ArrowLeft className="w-6 h-6" />
               </button>
               <div className="flex items-center gap-3">
@@ -517,24 +579,14 @@ const handleReject = async () => {
                   onClick={handleAccept}
                   className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                 >
-                  ✅
-                  ยอมรับ
+                  ✅ ยอมรับ
                 </button>
                 <button
                   onClick={handleReject}
                   className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition disabled:opacity-50"
                 >
-                  ❌
-                  ปฏิเสธ
+                  ❌ ปฏิเสธ
                 </button>
-                {/* <button
-                  onClick={handleDelete}
-                  disabled={deleteLoading}
-                  className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {deleteLoading ? "กำลังลบ..." : "ลบ"}
-                </button> */}
               </div>
             )}
           </div>
@@ -548,87 +600,83 @@ const handleReject = async () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Case Overview */}
             <div className="bg-white rounded-2xl shadow-sm p-6 relative">
-            {/* Edit button top right */}
-            {isOwner && !isEditing && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="absolute top-4 right-4 text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition flex items-center gap-1"
-              >
-                <Edit className="w-4 h-4" />
-                <span className="text-sm">แก้ไข</span>
-              </button>
-            )}
-
-            {/* Title */}
-            <div className="mb-4">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  className="text-2xl font-bold text-gray-900 w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
-                />
-              ) : (
-                <h1 className="text-2xl font-bold text-gray-900">{caseData.title}</h1>
+              {/* Edit button top right */}
+              {isOwner && !isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="absolute top-4 right-4 text-blue-600 hover:text-blue-800 px-3 py-1 rounded-md hover:bg-blue-50 transition flex items-center gap-1"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="text-sm">แก้ไข</span>
+                </button>
               )}
-            </div>
-
-            {/* Badges */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex gap-3">
-                <span
-                  className={`inline-block text-sm px-3 py-1 rounded-full ${getCategoryColor(caseData.category_type)}`}
-                >
-                  {getCategoryText(caseData.category_type)}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${getStatusColor(caseData.consultation_status)}`}
-                >
-                  {getStatusIcon(caseData.consultation_status)}
-                  {getStatusText(caseData.consultation_status)}
-                </span>
+              {/* Title */}
+              <div className="mb-4">
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    className="text-2xl font-bold text-gray-900 w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <h1 className="text-2xl font-bold text-gray-900">{caseData.title}</h1>
+                )}
+              </div>
+              {/* Badges */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex gap-3">
+                  <span
+                    className={`inline-block text-sm px-3 py-1 rounded-full ${getCategoryColor(caseData.category_type)}`}
+                  >
+                    {getCategoryText(caseData.category_type)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${getStatusColor(caseData.consultation_status)}`}
+                  >
+                    {getStatusIcon(caseData.consultation_status)}
+                    {getStatusText(caseData.consultation_status)}
+                  </span>
+                </div>
+              </div>
+              {/* Section title */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">รายละเอียดคดี</h2>
+              </div>
+              {/* Description */}
+              <div className="prose max-w-none">
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <textarea
+                      value={editedDescription}
+                      onChange={(e) => setEditedDescription(e.target.value)}
+                      className="w-full min-h-[200px] p-4 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                      placeholder="กรอกรายละเอียดคดี..."
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleSave}
+                        disabled={saveLoading}
+                        className="flex items-center gap-2 bg-[#353C63] text-white px-4 py-2 rounded-lg hover:bg-[#353C63]/80 transition disabled:opacity-50"
+                      >
+                        <Save className="w-4 h-4" />
+                        {saveLoading ? "กำลังบันทึก..." : "บันทึก"}
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={saveLoading}
+                        className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4" />
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-700 whitespace-pre-wrap">{caseData.description}</p>
+                )}
               </div>
             </div>
-
-            {/* Section title */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">รายละเอียดคดี</h2>
-            </div>
-
-            {/* Description */}
-            <div className="prose max-w-none">
-              {isEditing ? (
-                <div className="space-y-4">
-                  <textarea
-                    value={editedDescription}
-                    onChange={(e) => setEditedDescription(e.target.value)}
-                    className="w-full min-h-[200px] p-4 border border-gray-300 rounded-lg text-black focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
-                    placeholder="กรอกรายละเอียดคดี..."
-                  />
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleSave}
-                      disabled={saveLoading}
-                      className="flex items-center gap-2 bg-[#353C63] text-white px-4 py-2 rounded-lg hover:bg-[#353C63]/80 transition disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      {saveLoading ? "กำลังบันทึก..." : "บันทึก"}
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={saveLoading}
-                      className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition disabled:opacity-50"
-                    >
-                      <X className="w-4 h-4" />
-                      ยกเลิก
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-gray-700 whitespace-pre-wrap">{caseData.description}</p>
-              )}
-            </div>
-          </div>
 
             {/* Summons File Section - Only 1 File Allowed */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -665,7 +713,6 @@ const handleReject = async () => {
                   </div>
                 )}
               </div>
-
               {caseData.summons ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
@@ -777,7 +824,6 @@ const handleReject = async () => {
                   </div>
                 )}
               </div>
-
               {caseData.files && caseData.files.length > 0 ? (
                 <div className="space-y-3">
                   {caseData.files.map((filename, index) => (
@@ -891,8 +937,6 @@ const handleReject = async () => {
                 <p className="text-gray-700 whitespace-pre-wrap">{caseData.note}</p>
               </div>
             )}
-
-            
           </div>
 
           {/* Sidebar */}
@@ -925,96 +969,139 @@ const handleReject = async () => {
                 </div>
               </div>
             </div>
-            
-            
 
             {/* Lawyer Information */}
-              <div className="bg-white rounded-2xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Scale className="w-5 h-5" />
-                  ทนายความที่รับผิดชอบ
-                </h3>
-
-                {caseData.lawyer_id ? (
-                  <div className="flex items-center gap-3">
-                    {caseData.lawyer_id.photo ? (
-                      <div className="w-12 h-12 rounded-full overflow-hidden">
-                        <Image
-                          src={caseData.lawyer_id.photo || "/placeholder.svg"}
-                          alt={caseData.lawyer_id.name}
-                          width={48}
-                          height={48}
-                          unoptimized
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-green-600 font-medium text-lg">
-                          {caseData.lawyer_id.name?.charAt(0) || "?"}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900">{caseData.lawyer_id.name}</p>
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Scale className="w-5 h-5" />
+                ทนายความที่รับผิดชอบ
+              </h3>
+              {caseData.lawyer_id ? (
+                <div className="flex items-center gap-3">
+                  {caseData.lawyer_id.photo ? (
+                    <div className="w-12 h-12 rounded-full overflow-hidden">
+                      <Image
+                        src={caseData.lawyer_id.photo || "/placeholder.svg"}
+                        alt={caseData.lawyer_id.name}
+                        width={48}
+                        height={48}
+                        unoptimized
+                        className="object-cover w-full h-full"
+                      />
                     </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 font-medium text-lg">
+                        {caseData.lawyer_id.name?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-900">{caseData.lawyer_id.name}</p>
                   </div>
-                ) : caseData.offered_Lawyers.length > 0 ? (
-                  <div className="space-y-4">
-                    {caseData.offered_Lawyers.map((lawyer: Lawyer, index: number) => (
-                      <div key={index} className="flex items-center gap-3">
-                        {lawyer.photo ? (
-                          <div className="w-12 h-12 rounded-full overflow-hidden">
-                            <Image
-                              src={lawyer.photo || "/placeholder.svg"}
-                              alt={lawyer.name}
-                              width={48}
-                              height={48}
-                              unoptimized
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                            <span className="text-gray-500 font-medium text-lg">
-                              {lawyer.name?.charAt(0) || "?"}
-                            </span>
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-gray-900">{lawyer.name}</p>
+                </div>
+              ) : caseData.offered_Lawyers.length > 0 ? (
+                <div className="space-y-4">
+                  {caseData.offered_Lawyers.map((lawyer: Lawyer, index: number) => (
+                    <div key={index} className="flex items-center gap-3">
+                      {lawyer.photo ? (
+                        <div className="w-12 h-12 rounded-full overflow-hidden">
+                          <Image
+                            src={lawyer.photo || "/placeholder.svg"}
+                            alt={lawyer.name}
+                            width={48}
+                            height={48}
+                            unoptimized
+                            className="object-cover w-full h-full"
+                          />
                         </div>
+                      ) : (
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                          <span className="text-gray-500 font-medium text-lg">{lawyer.name?.charAt(0) || "?"}</span>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">{lawyer.name}</p>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4">
-                    <User className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">ยังไม่มีทนายความรับผิดชอบ</p>
-                  </div>
-                )}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <User className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-500 text-sm">ยังไม่มีทนายความรับผิดชอบ</p>
+                </div>
+              )}
+            </div>
 
-            {/* Case Timeline */}
+            {/* Case Timeline with Appointments */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Clock className="w-5 h-5" />
                 ไทม์ไลน์
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Case Creation */}
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">สร้างคดี</p>
                     <p className="text-xs text-gray-500">{formatDate(caseData.createdAt)}</p>
                   </div>
                 </div>
+
+                {/* Appointments */}
+                {appointmentsLoading ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">กำลังโหลดนัดหมาย...</p>
+                    </div>
+                  </div>
+                ) : (
+                  appointments.map((appointment) => (
+                    <div key={appointment._id} className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="w-4 h-4 text-purple-600" />
+                          <p className="text-sm font-medium text-gray-900">{appointment.title || "นัดหมาย"}</p>
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}
+                          >
+                            {getStatusIcon(appointment.status)}
+                            {getStatusText(appointment.status)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{formatAppointmentDate(appointment.timeStamp)}</p>
+                        {appointment.description && (
+                          <p className="text-xs text-gray-600 mt-1">{appointment.description}</p>
+                        )}
+                        {appointment.location && (
+                          <p className="text-xs text-gray-500 mt-1">📍 {appointment.location}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {/* Case Last Update */}
                 {caseData.updatedAt !== caseData.createdAt && (
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                    <div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">อัปเดตล่าสุด</p>
                       <p className="text-xs text-gray-500">{formatDate(caseData.updatedAt)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* No appointments message */}
+                {!appointmentsLoading && appointments.length === 0 && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500">ยังไม่มีนัดหมายสำหรับคดีนี้</p>
                     </div>
                   </div>
                 )}
