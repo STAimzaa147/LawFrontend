@@ -4,9 +4,10 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter, useParams } from "next/navigation"
-import { X, Camera, Tag } from 'lucide-react'
+import { X, Camera, Tag, Trash2 } from "lucide-react" // Added Trash2 icon
 import Image from "next/image"
 import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button" // Ensure Button is imported if not already
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
 
@@ -65,7 +66,8 @@ export default function EditArticlePage() {
   const [newImage, setNewImage] = useState<File | null>(null)
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving] = useState(false) // For save action
+  const [deleting, setDeleting] = useState(false) // For delete action
 
   // โหลดข้อมูลบทความมาสำหรับแก้ไข
   useEffect(() => {
@@ -75,22 +77,18 @@ export default function EditArticlePage() {
         return
       }
       try {
-        // FIX: Changed from apiFetch to native fetch for GET request
         const response = await fetch(`${backendUrl}/api/v1/article/${id}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session.accessToken}`,
           },
         })
-
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+          const errorData = await response.json()
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
         }
-
         const res: ApiResponse<ArticleItem> = await response.json()
-
         if (res.success && res.data) {
           const article = res.data
           setFormData({
@@ -162,7 +160,6 @@ export default function EditArticlePage() {
     if (!session?.accessToken) {
       return toast({ title: "คุณยังไม่ได้เข้าสู่ระบบ", variant: "destructive" })
     }
-
     try {
       setSaving(true)
       const form = new FormData()
@@ -175,25 +172,18 @@ export default function EditArticlePage() {
         // ถ้า user ลบรูปภาพเดิม ให้ส่ง empty string เพื่อเคลียร์ใน backend
         form.append("image", "")
       }
-
-      // FIX: Changed from apiFetch to native fetch for PUT request
       const response = await fetch(`${backendUrl}/api/v1/article/${id}`, {
         method: "PUT",
         headers: {
-          // When sending FormData, fetch automatically sets Content-Type: multipart/form-data
-          // Do NOT manually set Content-Type for FormData, as it will break the boundary
-          "Authorization": `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: form, // Pass FormData directly as body
       })
-
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json()
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
       }
-
       const res: ApiResponse<ArticleItem> = await response.json()
-
       if (res.success) {
         toast({ title: "อัปเดตสำเร็จ", description: "บทความได้รับการอัปเดตแล้ว" })
         router.push("/admin/articles")
@@ -212,6 +202,51 @@ export default function EditArticlePage() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  // ฟังก์ชันสำหรับลบบทความ
+  const handleDeleteArticle = async () => {
+    if (!session?.accessToken) {
+      return toast({ title: "คุณยังไม่ได้เข้าสู่ระบบ", variant: "destructive" })
+    }
+    if (!confirm("คุณแน่ใจหรือไม่ที่จะลบบทความนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้")) {
+      return
+    }
+    try {
+      setDeleting(true)
+      const response = await fetch(`${backendUrl}/api/v1/article/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+      }
+
+      const res: ApiResponse<any> = await response.json()
+      if (res.success) {
+        toast({ title: "ลบสำเร็จ", description: "บทความถูกลบเรียบร้อยแล้ว" })
+        router.push("/admin/articles")
+      } else {
+        toast({
+          title: "ไม่สามารถลบ",
+          description: res.message || "เกิดข้อผิดพลาดในการลบบทความ",
+          variant: "destructive",
+        })
+      }
+    } catch (error: any) {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message || "ไม่สามารถลบบทความได้",
+        variant: "destructive",
+      })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -243,6 +278,7 @@ export default function EditArticlePage() {
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           <input
@@ -295,6 +331,7 @@ export default function EditArticlePage() {
             </select>
           </div>
         </form>
+
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-100 bg-gray-50">
           <label className="cursor-pointer flex items-center gap-2 text-gray-600 hover:text-gray-800">
@@ -302,14 +339,32 @@ export default function EditArticlePage() {
             <span className="text-sm font-medium">เพิ่มรูปภาพ</span>
             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
           </label>
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={saving}
-            className="px-6 py-2 bg-slate-700 text-white rounded-full hover:bg-slate-800 transition-colors font-medium"
-          >
-            {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
-          </button>
+          <div className="flex gap-2">
+            {" "}
+            {/* Group buttons */}
+            <Button
+              onClick={handleDeleteArticle}
+              disabled={deleting || saving} // Disable if saving or deleting
+              variant="destructive"
+              className="bg-red-600 text-white hover:bg-red-700 px-6 py-2 rounded-full"
+            >
+              {deleting ? (
+                "กำลังลบ..."
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> ลบ
+                </>
+              )}
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={saving || deleting} // Disable if saving or deleting
+              className="px-6 py-2 bg-slate-700 text-white rounded-full hover:bg-slate-800 transition-colors font-medium"
+            >
+              {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
