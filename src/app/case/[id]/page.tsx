@@ -53,7 +53,7 @@ interface Appointment {
   }
   timeStamp: string
   status: "pending" | "confirmed" | "cancelled" | "completed"
-  title?: string
+  task?: string
   description?: string
   location?: string
   createdAt: string
@@ -148,6 +148,7 @@ export default function CaseDetailsPage() {
         const data = await res.json()
         if (data.success) {
           setAppointments(data.data)
+          console.log("Case appointment : ",data.data)
         } else {
           console.error("Failed to fetch appointments:", data.message)
         }
@@ -1065,7 +1066,7 @@ export default function CaseDetailsPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <CalendarDays className="w-4 h-4 text-purple-600" />
-                          <p className="text-sm font-medium text-gray-900">{appointment.title || "นัดหมาย"}</p>
+                          <p className="text-sm font-medium text-gray-900">{appointment.task || "นัดหมาย"}</p>
                           <span
                             className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}
                           >

@@ -1,3 +1,4 @@
+import type React from "react"
 import type { Metadata } from "next"
 import { Kanit } from "next/font/google"
 import "./globals.css"
@@ -27,15 +28,12 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* ✅ Make sure viewport is set for mobile responsiveness */}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body className={`${kanit.variable} antialiased text-gray-900`}>
         <NextAuthProvider session={session}>
           <TopMenu />
-          <main className="min-h-screen w-full px-4 sm:px-6 md:px-8 lg:px-12">
-            {children}
-          </main>
+          <main className="min-h-screen w-full px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">{children}</main>
         </NextAuthProvider>
       </body>
     </html>
