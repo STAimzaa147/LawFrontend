@@ -49,7 +49,7 @@ export default function TopMenu() {
                 <MenuItem>
                   {({ active }) => (
                     <button
-                      onClick={() => signOut({ callbackUrl: "/admin/login" })}
+                      onClick={() => signOut({ callbackUrl: "/api/auth/signin" })}
                       className={`flex items-center gap-2 w-full text-left px-4 py-2 text-sm rounded-md ${active ? "bg-gray-100 text-gray-900" : "text-gray-700"}`}
                     >
                       <LogOut className="h-4 w-4" />
@@ -61,7 +61,7 @@ export default function TopMenu() {
             </MenuItems>
           </Menu>
         ) : (
-          <Link href="/admin/login" className="text-gray-700 font-medium hover:text-gray-900">
+          <Link href="/api/auth/signin" className="text-gray-700 font-medium hover:text-gray-900">
             เข้าสู่ระบบ
           </Link>
         )}

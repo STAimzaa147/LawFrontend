@@ -185,8 +185,8 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">การจัดการผู้ใช้</h1>
-      <Card>
+      <h1 className="text-3xl font-bold text-white">การจัดการผู้ใช้</h1>
+      <Card className="bg-white">
         <CardHeader>
           <CardTitle>รายการผู้ใช้ทั้งหมด</CardTitle>
         </CardHeader>
@@ -298,13 +298,13 @@ export default function AdminUsersPage() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
+                          <DropdownMenuContent align="end" className="bg-white">
+                            <DropdownMenuItem asChild className="hover:bg-gray-200">
                               <Link href={`/admin/users/${user._id}`}>
                                 <Pencil className="mr-2 h-4 w-4" /> ดูข้อมูลและแก้ไข
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDeleteUser(user._id)}>
+                            <DropdownMenuItem onClick={() => handleDeleteUser(user._id)} className="hover:bg-gray-200">
                               <Trash2 className="mr-2 h-4 w-4" /> ลบ
                             </DropdownMenuItem>
                           </DropdownMenuContent>
