@@ -128,7 +128,7 @@ export default function AdminArticlesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#242940] p-8">
+    <div className="min-h-screen bg-slate-800 p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-white">การจัดการบทความ</h1>
@@ -183,7 +183,7 @@ export default function AdminArticlesPage() {
                       </p>
                       <div className="flex gap-3">
                         <Link href={`/admin/articles/${article._id}/edit`}>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-full">
+                          <Button className="bg-slate-700 text-white hover:bg-slate-800 px-6 py-2 rounded-full">
                             <Pencil className="mr-2 h-4 w-4" /> แก้ไข
                           </Button>
                         </Link>

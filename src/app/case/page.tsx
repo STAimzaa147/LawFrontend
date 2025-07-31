@@ -198,7 +198,7 @@ export default function CasePage() {
           <p className="text-gray-300 mb-4">คุณต้องเข้าสู่ระบบก่อนจึงจะสามารถดูคดีของคุณได้</p>
           <button
             onClick={() => router.push("/api/auth/signin")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover: transition"
           >
             เข้าสู่ระบบ
           </button>
@@ -217,7 +217,7 @@ export default function CasePage() {
           <p className="text-gray-300 mb-4">บทบาทของคุณไม่ได้รับอนุญาตให้เข้าถึงหน้านี้</p>
           <button
             onClick={() => router.push("/")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover: transition"
           >
             กลับหน้าหลัก
           </button>
@@ -396,7 +396,7 @@ export default function CasePage() {
             {!searchTerm && selectedStatus === "all" && (userRole === "client" || userRole === "user") && (
               <button
                 onClick={handleAddCaseClick}
-                className="mt-4 bg-[#C9A55C] text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                className="mt-4 bg-[#C9A55C] text-white px-6 py-2 rounded-lg hover: transition"
               >
                 สร้างคดีแรกของคุณ
               </button>

@@ -365,10 +365,10 @@ export default function AdminLawyerDetailPage() {
   const user = lawyer._id
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
+    <div className="min-h-screen p-6 bg-slate-800">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 pb-2 border-b border-gray-200 flex-grow">
+          <h1 className="text-3xl font-bold text-white pb-2 border-b border-gray-200 flex-grow">
             แก้ไขข้อมูลทนายความ: {user.name}
           </h1>
         </div>
@@ -643,7 +643,7 @@ export default function AdminLawyerDetailPage() {
                 {articlesLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700 mx-auto mb-2"></div>
-                    <div className="text-gray-500">กำลังโหลดบทความ...</div>
+                    <div className="text-white">กำลังโหลดบทความ...</div>
                   </div>
                 ) : articles.length === 0 ? (
                   <div className="text-center py-8">

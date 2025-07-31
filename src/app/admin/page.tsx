@@ -81,10 +81,10 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">แดชบอร์ดผู้ดูแลระบบ</h1>
+      <h1 className="text-3xl font-bold text-white">แดชบอร์ดผู้ดูแลระบบ</h1>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Card for Total Users */}
-        <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => router.push("/admin/users")}>
+        <Card className="cursor-pointer bg-white hover:bg-gray-100 transition-colors" onClick={() => router.push("/admin/users")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ผู้ใช้ทั้งหมด</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
         </Card>
         {/* Card for Registered Lawyers */}
         <Card
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          className="cursor-pointer bg-white hover:bg-gray-100 transition-colors"
           onClick={() => router.push("/admin/lawyers")}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
         {/* Card for News */}
-        <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => router.push("/admin/news")}>
+        <Card className="cursor-pointer bg-white hover:bg-gray-100 transition-colors" onClick={() => router.push("/admin/news")}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ข่าวสาร</CardTitle>
             <Newspaper className="h-4 w-4 text-muted-foreground" />
@@ -118,7 +118,7 @@ export default function AdminDashboardPage() {
         </Card>
         {/* Card for New Case Requests */}
         <Card
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          className="cursor-pointer bg-white hover:bg-gray-100 transition-colors"
           onClick={() => router.push("/admin/case-requests")}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
         </Card>
         {/* Card for Total Forums */}
         <Card
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          className="cursor-pointer bg-white hover:bg-gray-100 transition-colors"
           onClick={() => router.push("/admin/forums")}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
         </Card>
         {/* Card for Total Articles */}
         <Card
-          className="cursor-pointer hover:bg-gray-50 transition-colors"
+          className="cursor-pointer bg-white hover:bg-gray-100 transition-colors"
           onClick={() => router.push("/admin/articles")}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

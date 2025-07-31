@@ -144,7 +144,7 @@ export default function CreateArticlePage() {
           <p className="text-gray-300 mb-4">คุณต้องเข้าสู่ระบบก่อนจึงจะสามารถสร้างบทความได้</p>
           <button
             onClick={() => router.push("/api/auth/signin")}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover: transition"
           >
             เข้าสู่ระบบ
           </button>

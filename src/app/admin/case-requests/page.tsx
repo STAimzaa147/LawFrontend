@@ -180,7 +180,7 @@ export default function AdminCaseRequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#242940] p-8">
+    <div className="min-h-screen bg-slate-800 p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-white">การจัดการคำขอคดี</h1>
         <div className="flex flex-wrap items-center gap-4">

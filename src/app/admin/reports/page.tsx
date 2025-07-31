@@ -6,7 +6,7 @@ import AdminCommentReportsPage from "./comments/page"
 
 export default function AdminReportsPage() {
   return (
-    <div className="min-h-screen bg-[#242940] p-8">
+    <div className="min-h-screen bg-slate-800 p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold text-white mb-6">การจัดการรายงาน</h1>
         <Tabs defaultValue="forum-reports" className="w-full">
