@@ -26,6 +26,16 @@ interface UserCase {
   note: string
 }
 
+interface AppointmentPayload {
+  timeStamp: string
+  task: string
+  location: string
+  note: string
+  permission: string
+  status: string
+  case_id?: string
+}
+
 export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentModalProps) {
   const { data: session } = useSession()
   const [userCases, setUserCases] = useState<UserCase[]>([])
@@ -33,7 +43,6 @@ export default function AddAppointmentModal({ onClose, onSave }: AddAppointmentM
     value: userCase._id,
     label: `(${userCase.title.slice(0, 50)})`,
     }))
-  const [casesLoading, setCasesLoading] = useState(false)
   const [selectedCaseId, setSelectedCaseId] = useState("")
   const [formData, setFormData] = useState({
     task: "",
@@ -103,7 +112,6 @@ const getEndTimeMin = () => {
   // Fetch user's cases without lawyer
     const fetchUserCases = useCallback(async () => {
         if (!session?.accessToken || !session?.user?.role) return
-        setCasesLoading(true)
 
         try {
             const role = session.user.role
@@ -129,7 +137,6 @@ const getEndTimeMin = () => {
         } catch (error) {
             console.error("Error fetching user cases:", error)
         } finally {
-            setCasesLoading(false)
         }
         }, [backendUrl, session])
   
@@ -140,93 +147,72 @@ const getEndTimeMin = () => {
     }, [session, backendUrl, fetchUserCases])
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    const token = session?.accessToken
-    const userRole = session?.user?.role
-    const selectedCase = userCases.find((c) => c._id === selectedCaseId)
+    try {
+      const token = session?.accessToken;
+      const userRole = session?.user?.role;
 
-    if (!selectedCase) {
-      throw new Error("No case selected")
-    }
+      const dateOnly = new Date(formData.date);
+      if (!startTime) throw new Error("Start time is required");
 
-    const caseClientId = selectedCase.client_id
-    const caseLawyerId = selectedCase.lawyer_id
+      const timestamp = new Date(
+        dateOnly.getFullYear(),
+        dateOnly.getMonth(),
+        dateOnly.getDate(),
+        startTime.getHours(),
+        startTime.getMinutes()
+      );
 
-    const dateOnly = new Date(formData.date)
-    if (!startTime) throw new Error("Start time is required")
+      const appointmentData: AppointmentPayload  = {
+        timeStamp: timestamp.toISOString(),
+        task: formData.task,
+        location: formData.location,
+        note: formData.note,
+        permission: formData.permission,
+        status: "confirmed",
+      };
 
-    const timestamp = new Date(
-      dateOnly.getFullYear(),
-      dateOnly.getMonth(),
-      dateOnly.getDate(),
-      startTime.getHours(),
-      startTime.getMinutes()
-    )
+      const selectedCase = userCases.find((c) => c._id === selectedCaseId);
 
-    const appointmentData = {
-      case_id: selectedCaseId,
-      client_id: caseClientId,
-      lawyer_id: caseLawyerId,
-      timeStamp: timestamp.toISOString(),
-      task: formData.task,
-      location: formData.location,
-      note: formData.note,
-      permission: formData.permission,
-      status: "confirmed",
-    }
+      if (selectedCaseId) {
+        if (!selectedCase) throw new Error("Invalid case selected");
 
-    // 📌 Step 1: Save to your backend
-    const response = await fetch(`${backendUrl}/api/v1/appointment/create/${selectedCaseId}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(appointmentData),
-    })
+        appointmentData.case_id = selectedCaseId;
+        // no need to manually attach client_id/lawyer_id; backend handles that
+      }
 
-    if (!response.ok) {
-      throw new Error("Failed to create appointment")
-    }
-
-    // 📌 Step 2: Sync to Google Calendar
-    if (token) {
-      await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      // 📌 Save to backend
+      const response = await fetch(`${backendUrl}/api/v1/appointment/create`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          summary: formData.task,
-          description: formData.note || "",
-          location: formData.location,
-          start: {
-            dateTime: timestamp.toISOString(),
-            timeZone: "Asia/Bangkok",
-          },
-          end: {
-            dateTime: new Date(timestamp.getTime() + 60 * 60 * 1000).toISOString(), // 1 hour later
-            timeZone: "Asia/Bangkok",
-          },
-        }),
-      })
-    }
+        body: JSON.stringify(appointmentData),
+      });
 
-    // 📌 Step 3: Refresh calendar
-    const refreshId = userRole === "lawyer" ? caseLawyerId : caseClientId
-    onSave(refreshId || "")
-    onClose()
-  } catch (error) {
-    console.error("Error creating appointment:", error)
-    alert("เกิดข้อผิดพลาดในการสร้างนัดหมาย")
-  } finally {
-    setLoading(false)
-  }
-}
+      if (!response.ok) {
+        throw new Error("Failed to create appointment");
+      }
+
+      // 📌 Refresh calendar
+      const refreshId = selectedCase
+        ? userRole === "lawyer"
+          ? selectedCase.lawyer_id
+          : selectedCase.client_id
+        : session?.user?.id;
+
+      onSave(refreshId || "");
+      onClose();
+    } catch (error) {
+      console.error("Error creating appointment:", error);
+      alert("เกิดข้อผิดพลาดในการสร้างนัดหมาย");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -257,21 +243,18 @@ const getEndTimeMin = () => {
             {/* Case */}
             <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">เลือกคดีของคุณ</label>
-            {casesLoading ? (
-                <div className="text-gray-500 text-sm">กำลังโหลดคดี...</div>
-            ) : userCases.length === 0 ? (
-                <div className="text-sm text-gray-500">ไม่มีคดีที่ยังไม่มีทนาย</div>
-            ) : (
-                <Select
-                options={caseOptions}
-                value={caseOptions.find((option) => option.value === selectedCaseId)}
-                onChange={(selected) => setSelectedCaseId(selected?.value || "")}
-                placeholder="เลือกคดีที่ต้องการนัดหมาย"
-                isSearchable
-                className="text-sm text-black"
-                classNamePrefix="react-select"
-                />
-            )}
+            <Select
+              options={[
+                { value: "", label: "ไม่มีคดี (เพิ่มเป็นอีเวนต์ส่วนตัว)" },
+                ...caseOptions,
+              ]}
+              value={caseOptions.find((option) => option.value === selectedCaseId) || { value: "", label: "ไม่มีคดี" }}
+              onChange={(selected) => setSelectedCaseId(selected?.value || "")}
+              placeholder="เลือกคดีที่ต้องการนัดหมาย หรือปล่อยว่าง"
+              isSearchable
+              className="text-sm text-black"
+              classNamePrefix="react-select"
+            />
             </div>
 
             {/* Location */}
