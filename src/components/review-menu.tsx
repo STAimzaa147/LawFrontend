@@ -6,7 +6,6 @@ import { FiEdit } from "react-icons/fi"
 function ReviewMenu({
   onEdit,
   onDelete,
-  onReport,
   isOwner,
 }: {
   onEdit?: () => void
@@ -62,15 +61,7 @@ function ReviewMenu({
               </button>
             </>
           )}
-          <button
-            onClick={() => {
-              onReport()
-              setOpen(false)
-            }}
-            className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-black"
-          >
-            🚩 Report
-          </button>
+          
         </div>
       )}
     </div>
