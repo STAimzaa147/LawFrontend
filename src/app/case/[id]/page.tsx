@@ -100,6 +100,7 @@ export default function CaseDetailsPage() {
   const [saveLoading, setSaveLoading] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [deletingFileIndex, setDeletingFileIndex] = useState<number | null>(null)
+  const [removingLawyerId, setRemovingLawyerId] = useState<string | null>(null)
 
   const caseId = params.id as string
 
@@ -148,7 +149,7 @@ export default function CaseDetailsPage() {
         const data = await res.json()
         if (data.success) {
           setAppointments(data.data)
-          console.log("Case appointment : ",data.data)
+          console.log("Case appointment : ", data.data)
         } else {
           console.error("Failed to fetch appointments:", data.message)
         }
@@ -176,6 +177,7 @@ export default function CaseDetailsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       })
+
       if (res.ok) {
         router.push("/case")
       } else {
@@ -203,6 +205,7 @@ export default function CaseDetailsPage() {
           description: editedDescription,
         }),
       })
+
       const data = await res.json()
       if (data.success) {
         setCaseData((prev) => (prev ? { ...prev, title: editedTitle, description: editedDescription } : null))
@@ -297,6 +300,39 @@ export default function CaseDetailsPage() {
       alert("เกิดข้อผิดพลาดในการลบไฟล์")
     } finally {
       setDeletingFileIndex(null)
+    }
+  }
+
+  const handleRemoveOfferedLawyer = async (lawyerId: string, lawyerName: string) => {
+    const confirmed = confirm(`คุณแน่ใจหรือไม่ที่จะเอาทนายความ "${lawyerName}" ออกจากรายการที่เสนอ?`)
+    if (!confirmed) return
+
+    setRemovingLawyerId(lawyerId)
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}/offered-lawyers/${lawyerId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        // Update local state by removing the lawyer from offered_Lawyers
+        setCaseData((prev) => {
+          if (!prev) return prev
+          const updatedOfferedLawyers = prev.offered_Lawyers.filter((lawyer) => lawyer._id !== lawyerId)
+          return { ...prev, offered_Lawyers: updatedOfferedLawyers }
+        })
+        alert(`เอาทนายความ "${lawyerName}" ออกจากรายการเรียบร้อยแล้ว`)
+      } else {
+        alert(data.message || "ไม่สามารถเอาทนายความออกจากรายการได้")
+      }
+    } catch (error) {
+      console.error("Error removing offered lawyer:", error)
+      alert("เกิดข้อผิดพลาดในการเอาทนายความออกจากรายการ")
+    } finally {
+      setRemovingLawyerId(null)
     }
   }
 
@@ -426,6 +462,9 @@ export default function CaseDetailsPage() {
   }
 
   const isOwner = session?.user?.id === caseData?.client_id._id
+  const isAssignedLawyer = session?.user?.id === caseData?.lawyer_id?._id
+  const isAdmin = session?.user?.role === "admin"
+  const canRemoveOfferedLawyers = isAdmin || isOwner || isAssignedLawyer
 
   const handleAccept = async () => {
     try {
@@ -436,6 +475,7 @@ export default function CaseDetailsPage() {
           Authorization: `Bearer ${session?.accessToken}`, // if using auth
         },
       })
+
       const data = await response.json()
       if (response.ok && data.success) {
         alert("คุณได้ยอมรับคำขอเรียบร้อยแล้ว")
@@ -452,21 +492,37 @@ export default function CaseDetailsPage() {
   }
 
   const handleReject = async () => {
+    const confirmed = confirm("คุณแน่ใจหรือไม่ที่จะปฏิเสธคดีนี้? คุณจะถูกเอาออกจากรายการทนายความที่เสนอตัว")
+    if (!confirmed) return
+
     try {
-      const response = await fetch(`${backendUrl}/api/v1/caseRequest/${caseId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`, // if using auth
+      // Use the same API endpoint to remove the lawyer from offered_Lawyers
+      const response = await fetch(
+        `${backendUrl}/api/v1/caseRequest/${caseId}/offered-lawyers/${session?.user?.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
         },
-      })
+      )
+
       const data = await response.json()
       if (response.ok && data.success) {
-        alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว")
-        // You can also refetch or update UI here
+        // Update local state by removing the current lawyer from offered_Lawyers
+        setCaseData((prev) => {
+          if (!prev) return prev
+          const updatedOfferedLawyers = prev.offered_Lawyers.filter((lawyer) => lawyer._id !== session?.user?.id)
+          return { ...prev, offered_Lawyers: updatedOfferedLawyers }
+        })
+
+        alert("คุณได้ปฏิเสธคำขอเรียบร้อยแล้ว และถูกเอาออกจากรายการทนายความที่เสนอตัว")
+
+        // Redirect back to cases list since the lawyer is no longer part of this case
+        router.push("/case")
       } else {
         console.error(data.message || "เกิดข้อผิดพลาด")
-        alert("การปฏิเสธคำขอล้มเหลว")
+        alert(data.message || "การปฏิเสธคำขอล้มเหลว")
       }
     } catch (error) {
       console.error("Error rejecting request:", error)
@@ -611,6 +667,7 @@ export default function CaseDetailsPage() {
                   <span className="text-sm">แก้ไข</span>
                 </button>
               )}
+
               {/* Title */}
               <div className="mb-4">
                 {isEditing ? (
@@ -624,6 +681,7 @@ export default function CaseDetailsPage() {
                   <h1 className="text-2xl font-bold text-gray-900">{caseData.title}</h1>
                 )}
               </div>
+
               {/* Badges */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex gap-3">
@@ -640,10 +698,12 @@ export default function CaseDetailsPage() {
                   </span>
                 </div>
               </div>
+
               {/* Section title */}
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">รายละเอียดคดี</h2>
               </div>
+
               {/* Description */}
               <div className="prose max-w-none">
                 {isEditing ? (
@@ -714,6 +774,7 @@ export default function CaseDetailsPage() {
                   </div>
                 )}
               </div>
+
               {caseData.summons ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
@@ -825,6 +886,7 @@ export default function CaseDetailsPage() {
                   </div>
                 )}
               </div>
+
               {caseData.files && caseData.files.length > 0 ? (
                 <div className="space-y-3">
                   {caseData.files.map((filename, index) => (
@@ -1003,27 +1065,48 @@ export default function CaseDetailsPage() {
                 </div>
               ) : caseData.offered_Lawyers.length > 0 ? (
                 <div className="space-y-4">
-                  {caseData.offered_Lawyers.map((lawyer: Lawyer, index: number) => (
-                    <div key={index} className="flex items-center gap-3">
-                      {lawyer.photo ? (
-                        <div className="w-12 h-12 rounded-full overflow-hidden">
-                          <Image
-                            src={lawyer.photo || "/placeholder.svg"}
-                            alt={lawyer.name}
-                            width={48}
-                            height={48}
-                            unoptimized
-                            className="object-cover w-full h-full"
-                          />
+                  <p className="text-sm text-gray-600 mb-3">ทนายความที่เสนอตัว:</p>
+                  {caseData.offered_Lawyers.map((lawyer: Lawyer) => (
+                    <div
+                      key={lawyer._id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        {lawyer.photo ? (
+                          <div className="w-10 h-10 rounded-full overflow-hidden">
+                            <Image
+                              src={lawyer.photo || "/placeholder.svg"}
+                              alt={lawyer.name}
+                              width={40}
+                              height={40}
+                              unoptimized
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <span className="text-gray-500 font-medium text-sm">{lawyer.name?.charAt(0) || "?"}</span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{lawyer.name}</p>
+                          <p className="text-xs text-gray-500">{lawyer.email}</p>
                         </div>
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-gray-500 font-medium text-lg">{lawyer.name?.charAt(0) || "?"}</span>
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">{lawyer.name}</p>
                       </div>
+                      {canRemoveOfferedLawyers && (
+                        <button
+                          onClick={() => handleRemoveOfferedLawyer(lawyer._id, lawyer.name)}
+                          disabled={removingLawyerId === lawyer._id}
+                          className="flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                          title={`เอา ${lawyer.name} ออกจากรายการ`}
+                        >
+                          {removingLawyerId === lawyer._id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-red-600"></div>
+                          ) : (
+                            <X className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
