@@ -71,6 +71,7 @@ export default function AdminForumReportDetailPage() {
         const data = await response.json()
         if (data.success) {
           setReport(data.data)
+          console.log("Fetched report data:", data.data)
         } else {
           toast({
             title: "ข้อผิดพลาด",
@@ -219,7 +220,7 @@ export default function AdminForumReportDetailPage() {
             <h3 className="text-lg font-semibold text-gray-900">ข้อมูลกระทู้ที่ถูกรายงาน</h3>
             <div>
               <Label>หัวข้อกระทู้</Label>
-              <Input value={report.forum_id?.title || "กระทู้ถูกลบแล้ว"} readOnly />
+              <Input value={report.forum_id?.title || "กระทู้ถูกลบแล้ว"} readOnly/>
             </div>
             <div>
               <Label>เนื้อหากระทู้</Label>
@@ -243,19 +244,11 @@ export default function AdminForumReportDetailPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm text-gray-700">
               <div className="flex flex-col">
                 <span className="font-medium text-gray-500">ผู้โพสต์:</span>
-                <span>{report.forum_id?.poster_id?.name || "ไม่ระบุ"}</span>
+                <span onClick={() => router.push(`/admin/users/${report.forum_id.poster_id?._id}`)}>{report.forum_id.poster_id?.name || "ไม่ระบุ"}</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-medium text-gray-500">ยอดวิว:</span>
-                <span>{report.forum_id?.view_count || 0}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-medium text-gray-500">ความคิดเห็น:</span>
-                <span>{report.forum_id?.comment_count || 0}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-medium text-gray-500">ยอดไลค์:</span>
-                <span>{report.forum_id?.like_count || 0}</span>
+                <span>{report.forum_id.view_count || 0}</span>
               </div>
               <div className="flex flex-col">
                 <span className="font-medium text-gray-500">วันที่สร้างกระทู้:</span>
@@ -273,10 +266,6 @@ export default function AdminForumReportDetailPage() {
             <div>
               <Label>ผู้รายงาน</Label>
               <Input value={report.reporter_id?.name || "ไม่ระบุ"} readOnly />
-            </div>
-            <div>
-              <Label>อีเมลผู้รายงาน</Label>
-              <Input value={report.reporter_id?.email || "ไม่ระระบุ"} readOnly />
             </div>
             <div>
               <Label>เหตุผลการรายงาน</Label>
@@ -304,7 +293,7 @@ export default function AdminForumReportDetailPage() {
                 "กำลังลบ..."
               ) : (
                 <>
-                  <Trash2 className="mr-2 h-4 w-4" /> ลบ
+                  <Trash2 className="mr-2 h-4 w-4" /> ลบกระทู้
                 </>
               )}
             </Button>
